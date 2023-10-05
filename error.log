@@ -1,0 +1,36 @@
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: User.validatePassword is not a function","stack":"TypeError: User.validatePassword is not a function\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:47:21\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: User.validatePassword is not a function","stack":"TypeError: User.validatePassword is not a function\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:47:21\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: callback is not a function","stack":"TypeError: callback is not a function\n    at Strategy.strategy.success (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport/lib/middleware/authenticate.js:222:18)\n    at verified (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport-local/lib/strategy.js:83:10)\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:50:18\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: callback is not a function","stack":"TypeError: callback is not a function\n    at Strategy.strategy.success (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport/lib/middleware/authenticate.js:222:18)\n    at verified (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport-local/lib/strategy.js:83:10)\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:50:18\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: User.validatePassword is not a function","stack":"TypeError: User.validatePassword is not a function\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:47:21\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: callback is not a function","stack":"TypeError: callback is not a function\n    at Strategy.strategy.success (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport/lib/middleware/authenticate.js:222:18)\n    at verified (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport-local/lib/strategy.js:83:10)\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:50:18\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"This is an error message."}
+{"level":"error","message":"Error during authentication: callback is not a function","stack":"TypeError: callback is not a function\n    at Strategy.strategy.success (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport/lib/middleware/authenticate.js:222:18)\n    at verified (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport-local/lib/strategy.js:83:10)\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:49:18\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"Error during authentication: callback is not a function","stack":"TypeError: callback is not a function\n    at Strategy.strategy.success (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport/lib/middleware/authenticate.js:222:18)\n    at verified (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport-local/lib/strategy.js:83:10)\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:50:18\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"Error during authentication: callback is not a function","stack":"TypeError: callback is not a function\n    at Strategy.strategy.success (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport/lib/middleware/authenticate.js:222:18)\n    at verified (/Users/tristanguckenberger/omnicollective/srcdoc_server/node_modules/passport-local/lib/strategy.js:83:10)\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:49:18\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"Error during authentication: User?.validatePassword is not a function","stack":"TypeError: User?.validatePassword is not a function\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:55:22\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"Error during authentication: User?.validatePassword is not a function","stack":"TypeError: User?.validatePassword is not a function\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:88:29\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
+{"level":"error","message":"Error during authentication: User?.validatePassword is not a function","stack":"TypeError: User?.validatePassword is not a function\n    at /Users/tristanguckenberger/omnicollective/srcdoc_server/passport-setup.js:88:29\n    at processTicksAndRejections (node:internal/process/task_queues:96:5)"}
