@@ -5,7 +5,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
-// const bodyParser = require("body-parser");
+const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
 const authRoutes = require("./routes/authRoutes");
 const errorHandler = require("./middleware/errorHandler");
@@ -44,10 +44,8 @@ app.use(passport.session());
 
 require("./passport-setup");
 
-// Middleware
-// app.use(bodyParser.json());
-
 // Routes
+app.use("/api/users", userRoutes);
 app.use("/api/games", gameRoutes);
 app.use("/api/auth", authRoutes);
 

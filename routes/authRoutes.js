@@ -5,8 +5,7 @@ const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const { query } = require("../config/db");
 const { body, validationResult } = require("express-validator");
-const logger = require("../middleware/logger");
-const { log } = require("winston");
+const { authenticate } = require("../middleware/auth");
 
 dotenv.config();
 
@@ -42,31 +41,6 @@ router.post(
   }
 );
 
-// // User login
-// router.post("/login", async (req, res, next) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     const result = await query("SELECT * FROM users WHERE email = $1", [email]);
-
-//     const user = result.rows[0];
-//     if (!user)
-//       return res.status(400).json({ message: "Invalid email or password" });
-
-//     const validPassword = await bcrypt.compare(password, user.password);
-//     if (!validPassword)
-//       return res.status(400).json({ message: "Invalid email or password" });
-
-//     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-//       expiresIn: "1d",
-//     });
-
-//     res.status(200).json({ token });
-//   } catch (error) {
-//     next(error);
-//   }
-// });
-
 // Local Login Route
 router.post(
   "/login",
@@ -85,6 +59,27 @@ router.post(
     res.json({ token });
   }
 );
+
+// User logout
+router.post("/logout", authenticate, (req, res) => {
+  req.logout(); // Provided by passport to invalidate the session
+  req.session.destroy((err) => {
+    // Destroy the session data
+    if (err) {
+      return res.status(400).json({ message: "Unable to log out" });
+    } else {
+      return res.status(200).json({ message: "Successfully logged out" });
+    }
+  });
+
+  // client side code => localStorage.removeItem('token');
+  /**
+   * @todo
+   * 1. Remove token from local storage
+   * 2. Redirect user to login page
+   *
+   */
+});
 
 // // Google OAuth Route
 // router.get(

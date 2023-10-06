@@ -1,7 +1,5 @@
 const bcrypt = require("bcrypt");
 const { query } = require("../config/db");
-const winston = require("winston");
-const logger = require("../middleware/logger");
 
 class User {
   constructor(id, username, email, password, googleId, githubId) {
@@ -12,15 +10,6 @@ class User {
     this.googleId = googleId;
     this.githubId = githubId;
   }
-  /** 
- *       await query("UPDATE users SET github_token = $1 WHERE id = $2", [
-        githubToken,
-        userId,
-      ]);
- * 
- * 
- * 
-*/
 
   static async findByEmail(email) {
     try {
@@ -46,7 +35,7 @@ class User {
     if (!password) {
       return false;
     }
-    console.log("this.password::validatePassword", this.password);
+
     try {
       const match = await bcrypt.compare(password, this.password);
       return match;

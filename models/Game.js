@@ -1,3 +1,5 @@
+const { query } = require("../config/db");
+
 class Game {
   constructor(
     id,
@@ -17,6 +19,16 @@ class Game {
     this.jsCode = jsCode;
     this.userId = userId;
     this.published = published;
+  }
+
+  static async findById(id) {
+    try {
+      const game = await query("SELECT * FROM games WHERE id = $1", [id]);
+      return game.rows[0];
+    } catch (error) {
+      console.error("Error fetching game by id:", error);
+      return null;
+    }
   }
 }
 
