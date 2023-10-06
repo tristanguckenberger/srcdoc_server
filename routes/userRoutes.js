@@ -1,6 +1,7 @@
 const express = require("express");
 const { query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
+const bcrypt = require("bcrypt");
 
 const router = express.Router();
 
@@ -71,6 +72,10 @@ router.put("/update/:id", authenticate, async (req, res, next) => {
     return res.status(401).json({
       message: "You may not access other fields while updating your password.",
     });
+  } else if (validUpdates?.includes("password")) {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    req.body.password = hashedPassword;
   }
 
   let queryStr = "UPDATE users SET ";

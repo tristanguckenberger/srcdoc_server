@@ -8,6 +8,11 @@ const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
 const authRoutes = require("./routes/authRoutes");
+const commentsRoutes = require("./routes/commentsRoutes");
+const favoritesRoutes = require("./routes/favoritesRoutes");
+const reviewsRoutes = require("./routes/reviewsRoutes");
+const issuesRoutes = require("./routes/issuesRoutes");
+
 const errorHandler = require("./middleware/errorHandler");
 const winston = require("winston");
 const logger = require("./middleware/logger.js");
@@ -48,6 +53,10 @@ require("./passport-setup");
 app.use("/api/users", userRoutes);
 app.use("/api/games", gameRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/comments", commentsRoutes);
+app.use("/api/favorites", favoritesRoutes);
+app.use("/api/reviews", reviewsRoutes);
+app.use("/api/issues", issuesRoutes);
 
 // Error Handling Middleware
 app.use(errorHandler);
