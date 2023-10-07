@@ -2,6 +2,7 @@ const express = require("express");
 const { query } = require("../config/db");
 const router = express.Router();
 const { authenticate } = require("../middleware/auth");
+const Comment = require("../models/Comment");
 
 // Add comment to Comments table
 router.post("/create", authenticate, async (req, res, next) => {
@@ -19,7 +20,7 @@ router.post("/create", authenticate, async (req, res, next) => {
 
   try {
     const result = await query(
-      "INSERT INTO favorites (user_id, game_id, parent_comment_id, comment_text) VALUES ($1, $2, $3, $4) RETURNING *",
+      "INSERT INTO comments (user_id, game_id, parent_comment_id, comment_text) VALUES ($1, $2, $3, $4) RETURNING *",
       [userId, gameId, parentCommentId, commentText]
     );
     res.status(201).json(result.rows[0]);
