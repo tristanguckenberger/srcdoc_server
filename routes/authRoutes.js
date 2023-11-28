@@ -56,6 +56,7 @@ router.post(
     const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
+    console.log("req.session::", req.session);
     res.json({ token });
   }
 );

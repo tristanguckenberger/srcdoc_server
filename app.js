@@ -12,6 +12,7 @@ const commentsRoutes = require("./routes/commentsRoutes");
 const favoritesRoutes = require("./routes/favoritesRoutes");
 const reviewsRoutes = require("./routes/reviewsRoutes");
 const issuesRoutes = require("./routes/issuesRoutes");
+const tagsRoutes = require("./routes/tagsRoutes");
 
 const errorHandler = require("./middleware/errorHandler");
 const winston = require("winston");
@@ -40,7 +41,8 @@ app.use(
   session({
     secret: process.env.JWT_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: true, // Save new sessions
+    cookie: { secure: true }, // Use secure cookies
   })
 );
 
@@ -57,6 +59,7 @@ app.use("/api/comments", commentsRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/reviews", reviewsRoutes);
 app.use("/api/issues", issuesRoutes);
+// app.use("/api/tags", tagsRoutes);
 
 // Error Handling Middleware
 app.use(errorHandler);
