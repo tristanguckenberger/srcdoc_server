@@ -42,24 +42,14 @@ router.post(
 );
 
 // Local Login Route
-router.post(
-  "/login",
-  (req, res, next) => {
-    next();
-  },
-  passport.authenticate("local", {
-    session: true,
-    usernameField: "email",
-    passwordField: "password",
-  }),
-  (req, res) => {
-    const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
-    console.log("req.session::", req.session);
-    res.json({ token });
-  }
-);
+router.post("/login", passport.authenticate("local"), (req, res) => {
+  console.log("hit login route", req.body);
+  const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+  console.log("req.session::", req.session);
+  res.json({ token });
+});
 
 // User logout
 router.post("/logout", authenticate, (req, res) => {

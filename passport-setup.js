@@ -35,13 +35,10 @@ passport.use(
       passReqToCallback: true,
     },
     async (req, email, password, done) => {
-      const bodyEmail = JSON.parse(JSON.stringify(req.body.email));
-      const bodyPassword = JSON.parse(JSON.stringify(req.body.password));
-
-      if (!bodyEmail) {
+      if (!email) {
         return done(null, false, { message: "No email provided" });
       }
-      const user = await User?.findByEmail(bodyEmail);
+      const user = await User?.findByEmail(email);
       try {
         if (!user) {
           return done(null, false, { message: "No user with that email" });
@@ -54,9 +51,7 @@ passport.use(
             user.googleId,
             user.githubId
           );
-          const userIsValid = await userWithMethods?.validatePassword(
-            bodyPassword
-          );
+          const userIsValid = await userWithMethods?.validatePassword(password);
           if (!userIsValid) {
             return done(null, false, { message: "Incorrect password" });
           }

@@ -5,6 +5,18 @@ const bcrypt = require("bcrypt");
 
 const router = express.Router();
 
+// Get Current User
+router.get("/me", authenticate, async (req, res, next) => {
+  const { id } = req?.user;
+  console.log("id", id);
+  // try {
+  const result = await query("SELECT * FROM users WHERE id = $1", [id]);
+  res.status(200).json(result.rows[0]);
+  // } catch (error) {
+  //   next(error);
+  // }
+});
+
 // Get All Users
 router.get("/all", async (req, res, next) => {
   try {
