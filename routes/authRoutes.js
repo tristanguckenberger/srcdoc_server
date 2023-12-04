@@ -11,6 +11,12 @@ dotenv.config();
 
 const router = express.Router();
 
+const makeToken = (user) => {
+  return jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+};
+
 // User registration
 router.post(
   "/register",
@@ -30,11 +36,14 @@ router.post(
     const hashedPassword = await bcrypt.hash(password, salt);
 
     try {
-      await query(
-        "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+      const user = await query(
+        "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) returning *",
         [username, email, hashedPassword]
       );
-      res.status(201).json({ message: "User registered successfully" });
+
+      const token = makeToken(user.rows[0]);
+
+      res.json({ token });
     } catch (error) {
       next(error);
     }
@@ -44,24 +53,34 @@ router.post(
 // Local Login Route
 router.post("/login", passport.authenticate("local"), (req, res) => {
   console.log("hit login route", req.body);
-  const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
-  });
+  const token = makeToken(req.user);
   console.log("req.session::", req.session);
   res.json({ token });
 });
 
 // User logout
 router.post("/logout", authenticate, (req, res) => {
-  req.logout(); // Provided by passport to invalidate the session
-  req.session.destroy((err) => {
-    // Destroy the session data
-    if (err) {
-      return res.status(400).json({ message: "Unable to log out" });
-    } else {
-      return res.status(200).json({ message: "Successfully logged out" });
-    }
-  });
+  try {
+    // req.logout now requires a callback
+    req.logout(function (err) {
+      if (err) {
+        return next(err);
+      }
+
+      // Continue only if logout was successful
+      req.session.destroy((err) => {
+        // Destroy the session data
+        if (err) {
+          return res.status(400).json({ message: "Unable to log out" });
+        } else {
+          return res.status(200).json({ message: "Successfully logged out" });
+        }
+      });
+    });
+  } catch (error) {
+    console.log("error::", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 
   // client side code => localStorage.removeItem('token');
   /**

@@ -20,7 +20,9 @@ router.get("/me", authenticate, async (req, res, next) => {
 // Get All Users
 router.get("/all", async (req, res, next) => {
   try {
-    const result = await query("SELECT * FROM users");
+    const result = await query(
+      "SELECT id, username, email, profile_photo, bio, is_active FROM users"
+    );
     res.status(200).json(result.rows);
   } catch (error) {
     next(error);
