@@ -3,9 +3,11 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
+const crypto = require("crypto");
 const { query } = require("../config/db");
 const { body, validationResult } = require("express-validator");
 const { authenticate } = require("../middleware/auth");
+const { sendVerificationEmail } = require("../utils/sendEmail");
 
 dotenv.config();
 
@@ -42,6 +44,16 @@ router.post(
       );
 
       const token = makeToken(user.rows[0]);
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+
+      // Store the verification token
+      await query("UPDATE users SET verification_token = $1 WHERE id = $2", [
+        verificationToken,
+        user.rows[0].id,
+      ]);
+
+      // Send verification email
+      sendVerificationEmail(user.rows[0].email, verificationToken);
 
       res.json({ token });
     } catch (error) {
@@ -49,6 +61,32 @@ router.post(
     }
   }
 );
+
+// Verification endpoint
+router.post("/verify", async (req, res, next) => {
+  const { verificationToken } = req.body;
+  try {
+    const user = await query(
+      "SELECT * FROM users WHERE verification_token = $1",
+      [verificationToken]
+    );
+
+    if (user.rows.length > 0) {
+      await query(
+        "UPDATE users SET is_active = true, verification_token = null WHERE id = $1",
+        [user.rows[0].id]
+      );
+
+      res.status(200).json({ message: "Email verified successfully!" });
+    } else {
+      res
+        .status(400)
+        .json({ message: "Invalid or expired verification token" });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Local Login Route
 router.post("/login", passport.authenticate("local"), (req, res) => {

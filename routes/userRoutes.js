@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Get Current User
 router.get("/me", authenticate, async (req, res, next) => {
-  const { id } = req?.user;
+  const id = req?.user?.id;
   console.log("id", id);
   // try {
   const result = await query("SELECT * FROM users WHERE id = $1", [id]);
