@@ -24,7 +24,7 @@ class File {
   // static find single file by file id
   static async findById(id) {
     try {
-      const file = await query("SELECT * FROM file WHERE id = $1", [id]);
+      const file = await query("SELECT * FROM files WHERE id = $1", [id]);
       return file.rows[0];
     } catch (error) {
       console.error("Error fetching file by id:", error);

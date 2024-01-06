@@ -15,7 +15,11 @@ router.post("/create", authenticate, placeholder, async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const { title, description = "", published = false } = req.body;
+  const {
+    title = "New Game Title",
+    description = "New Game Description",
+    published = false,
+  } = req.body;
 
   try {
     const result = await query(
@@ -334,12 +338,21 @@ router.post("/:gameId/files", authenticate, async (req, res, next) => {
 });
 
 // update a file
-router.post("/:gameId/files/:fileId", authenticate, async (req, res, next) => {
+router.put("/:gameId/files/:fileId", authenticate, async (req, res, next) => {
   const { gameId, fileId } = req.params;
   const userId = req?.user?.id;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  console.log("fileId::", fileId);
+
+  const file = await File.findById(fileId);
+
+  if (!file) {
+    console.log("file::NOT_FOUND");
+    return res.status(404).json({ message: "File not found" });
   }
 
   const { name, type, content, parentFileId } = req.body;
@@ -360,7 +373,13 @@ router.post("/:gameId/files/:fileId", authenticate, async (req, res, next) => {
   try {
     const result = await query(
       "UPDATE files SET name = $1, type = $2, content = $3, parent_file_id = $4 WHERE id = $5",
-      [name, type, content, parentFileId, fileId]
+      [
+        name ?? file?.name,
+        type ?? file?.type,
+        content ?? file?.content,
+        parentFileId ?? file?.parentFileId,
+        fileId,
+      ]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
