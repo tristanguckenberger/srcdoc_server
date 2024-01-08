@@ -53,6 +53,10 @@ exports.authenticate = async (req, res, next) => {
     }
   } catch (error) {
     console.log("ERROR::", error);
+    return res
+      .status(400)
+      .json({ message: "Bad token" })
+      .cookies("token", "", { expires: new Date(0) });
   }
 };
 
