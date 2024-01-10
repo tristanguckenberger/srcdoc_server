@@ -95,11 +95,11 @@ router.put("/update/:id", authenticate, async (req, res, next) => {
   }
 
   try {
-    await query(
-      "UPDATE games SET title = $1, description = $2, published = $3 WHERE id = $4",
+    const result = await query(
+      "UPDATE games SET title = $1, description = $2, published = $3 WHERE id = $4 RETURNING *",
       [title, description, published, id]
     );
-    res.status(200).json({ message: "Game updated" });
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     next(error);
   }

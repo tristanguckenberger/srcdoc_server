@@ -34,7 +34,7 @@ router.delete("/delete/:id", authenticate, async (req, res, next) => {
   const { id } = req.params;
   const userId = req?.user?.id;
 
-  const favorite = await Favorite.findById(id);
+  const favorite = await Favorite.findByGameAndUserId(id, userId);
 
   if (!favorite) {
     return res.status(404).json({ message: "Favorite not found" });
@@ -45,24 +45,27 @@ router.delete("/delete/:id", authenticate, async (req, res, next) => {
   }
 
   try {
-    await query("DELETE FROM favorites WHERE id = $1", [id]);
+    await query("DELETE FROM favorites WHERE id = $1", [favorite?.id]);
     res.status(200).json({ message: "Favorite deleted" });
   } catch (error) {
     next(error);
   }
 });
 
-// Get all favorites for a user
-router.get("/users/:id", async (req, res, next) => {
-  const userId = req?.params?.id;
+// Get all favorite games for a user
+router.get("/user", authenticate, async (req, res, next) => {
+  const userId = req?.user?.id;
 
   if (!userId) {
-    return res.status(404).json({ message: "Please pass in a user ID" });
+    return res
+      .status(404)
+      .json({ message: "You must be logged in to view your favorites" });
   }
 
   try {
+    // Join the 'favorites' table with the 'games' table
     const result = await query(
-      "SELECT * FROM favorites WHERE user_id = $1 ORDER BY id DESC",
+      "SELECT g.* FROM games g INNER JOIN favorites f ON g.id = f.game_id WHERE f.user_id = $1 ORDER BY g.id DESC",
       [userId]
     );
     res.status(200).json(result.rows);

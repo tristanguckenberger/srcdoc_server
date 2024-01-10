@@ -18,6 +18,20 @@ class Favorite {
       return null;
     }
   }
+
+  // find by game AND user id
+  static async findByGameAndUserId(gameId, userId) {
+    try {
+      const favorite = await query(
+        "SELECT * FROM favorites WHERE game_id = $1 AND user_id = $2",
+        [gameId, userId]
+      );
+      return favorite.rows[0];
+    } catch (error) {
+      console.error("Error fetching favorite by game and user id:", error);
+      return null;
+    }
+  }
 }
 
 module.exports = Favorite;
