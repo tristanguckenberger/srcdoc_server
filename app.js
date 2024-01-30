@@ -42,7 +42,7 @@ app.use(
     secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: true, // Save new sessions
-    cookie: { secure: true }, // Use secure cookies
+    cookie: { secure: false }, // Use secure cookies
   })
 );
 

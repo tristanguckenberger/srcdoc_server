@@ -88,12 +88,44 @@ router.post("/verify", async (req, res, next) => {
   }
 });
 
+// Forgot Password endpoint
+router.post("/forgot", async (req, res, next) => {
+  const { forgotToken } = req.body;
+  try {
+    const user = await query(
+      "SELECT * FROM users WHERE verification_token = $1",
+      [verificationToken]
+    );
+
+    if (user.rows.length > 0) {
+      await query(
+        "UPDATE users SET is_active = true, verification_token = null WHERE id = $1",
+        [user.rows[0].id]
+      );
+
+      res.status(200).json({ message: "Email verified successfully!" });
+    } else {
+      res
+        .status(400)
+        .json({ message: "Invalid or expired verification token" });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Local Login Route
 router.post("/login", passport.authenticate("local"), (req, res) => {
   console.log("hit login route", req.body);
   const token = makeToken(req.user);
   console.log("req.session::", req.session);
-  res.json({ token });
+  res.cookie("server_token", token, {
+    maxAge: 900000,
+    httpOnly: false,
+    path: "/server",
+  });
+  res.send({ token });
+  // res.json({ token });
 });
 
 // User logout
