@@ -4,6 +4,11 @@ const { authenticate } = require("../middleware/auth");
 const bcrypt = require("bcrypt");
 
 const router = express.Router();
+const multer = require("multer");
+
+// Set up multer with memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Get Current User
 router.get("/me", authenticate, async (req, res, next) => {
@@ -44,83 +49,103 @@ router.get("/:id", async (req, res, next) => {
 });
 
 // Update User
-router.put("/update/:id", authenticate, async (req, res, next) => {
-  const { id } = req.params;
-  const userId = req?.user?.id;
+router.put(
+  "/update/:id",
+  authenticate,
+  upload.single("profilePhoto"),
+  async (req, res, next) => {
+    const { id } = req.params;
+    const userId = req?.user?.id;
 
-  if (!userId || userId.toString() !== id.toString()) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const allowedFields = [
-    "username",
-    "password",
-    "email",
-    "profilePhoto",
-    "bio",
-    "isActive",
-  ];
-  const updates = Object.keys(req.body);
-
-  // Filtering out invalid field names
-  const validUpdates = updates.filter((update) =>
-    allowedFields.includes(update)
-  );
-
-  if (validUpdates?.length === 0) {
-    return res.status(400).json({ message: "No valid fields for update" });
-  } else if (validUpdates?.includes("isActive") && validUpdates?.length > 1) {
-    return res.status(401).json({
-      message:
-        "You may not access other fields while activating or deactivating.",
-    });
-  } else if (validUpdates?.includes("username") && validUpdates?.length > 1) {
-    return res.status(401).json({
-      message: "You may not access other fields while updating your username.",
-    });
-  } else if (validUpdates?.includes("email") && validUpdates?.length > 1) {
-    return res.status(401).json({
-      message: "You may not access other fields while updating your email.",
-    });
-  } else if (validUpdates?.includes("password") && validUpdates?.length > 1) {
-    return res.status(401).json({
-      message: "You may not access other fields while updating your password.",
-    });
-  } else if (validUpdates?.includes("password")) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    req.body.password = hashedPassword;
-  }
-
-  let queryStr = "UPDATE users SET ";
-  let queryValues = [];
-  let counter = 1;
-
-  validUpdates.forEach((field, index) => {
-    let dbField =
-      field === "profilePhoto"
-        ? "profile_photo"
-        : field === "isActive"
-        ? "is_active"
-        : field;
-    queryStr += `${dbField} = $${counter}`;
-    queryValues.push(req.body[field]);
-    if (index < validUpdates.length - 1) {
-      queryStr += ", ";
+    if (!userId || userId.toString() !== id.toString()) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
-    counter++;
-  });
 
-  queryStr += ` WHERE id = $${counter}`;
-  queryValues.push(id);
+    const allowedFields = [
+      "username",
+      "password",
+      "email",
+      "profilePhoto",
+      "bio",
+      "isActive",
+    ];
+    const updates = Object.keys(req.body);
 
-  try {
-    await query(queryStr, queryValues);
-    res.status(200).json({ message: "User updated" });
-  } catch (error) {
-    next(error);
+    let base64;
+    if (req.file) {
+      const fileBuffer = req.file.buffer;
+      base64 = fileBuffer.toString("base64");
+    }
+
+    // Filtering out invalid field names
+    const validUpdates = updates.filter((update) =>
+      allowedFields.includes(update)
+    );
+
+    if (validUpdates?.length === 0) {
+      return res.status(400).json({ message: "No valid fields for update" });
+    } else if (validUpdates?.includes("isActive") && validUpdates?.length > 1) {
+      return res.status(401).json({
+        message:
+          "You may not access other fields while activating or deactivating.",
+      });
+    } else if (validUpdates?.includes("username") && validUpdates?.length > 1) {
+      return res.status(401).json({
+        message:
+          "You may not access other fields while updating your username.",
+      });
+    } else if (validUpdates?.includes("email") && validUpdates?.length > 1) {
+      return res.status(401).json({
+        message: "You may not access other fields while updating your email.",
+      });
+    } else if (validUpdates?.includes("password") && validUpdates?.length > 1) {
+      return res.status(401).json({
+        message:
+          "You may not access other fields while updating your password.",
+      });
+    } else if (validUpdates?.includes("password")) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(req.body.password, salt);
+      req.body.password = hashedPassword;
+    }
+
+    let queryStr = "UPDATE users SET ";
+    let queryValues = [];
+    let counter = 1;
+
+    validUpdates.forEach((field, index) => {
+      let dbField =
+        field === "profilePhoto"
+          ? "profile_photo"
+          : field === "isActive"
+          ? "is_active"
+          : field;
+
+      if (field === "profilePhoto" && base64) {
+        queryStr += `${dbField} = $${counter}`;
+        queryValues.push(base64);
+      } else {
+        queryStr += `${dbField} = $${counter}`;
+        queryValues.push(req.body[field]);
+      }
+
+      if (index < validUpdates.length - 1) {
+        queryStr += ", ";
+      }
+      counter++;
+    });
+
+    queryStr += ` WHERE id = $${counter}`;
+    queryValues.push(id);
+
+    try {
+      await query(queryStr, queryValues);
+      res.status(200).json({ message: "User updated" });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // Delete User
 router.delete("/delete/:id", authenticate, async (req, res, next) => {
