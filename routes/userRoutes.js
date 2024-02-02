@@ -144,7 +144,7 @@ router.put(
 
       if (field === "profile_photo" && base64Str) {
         queryStr += `${dbField} = $${counter}`;
-        queryValues.push(base64Str);
+        queryValues.push(`${base64Str}`);
       } else {
         queryStr += `${dbField} = $${counter}`;
         queryValues.push(req.body[field]);
