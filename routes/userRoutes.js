@@ -78,12 +78,16 @@ router.put(
     ];
 
     let base64;
+    let base64Str;
     if (req.file) {
       const fileBuffer = req.file.buffer;
       base64 = fileBuffer.toString("base64");
+      // need to append data:image/<ending>;base64, where ending is the file type
+      const fileType = req.file.mimetype.split("/")[1];
+      base64Str = `data:image/${fileType};base64,${base64}`;
     }
 
-    const updates = Object.keys({ ...req.body, profilePhoto: base64 });
+    const updates = Object.keys({ ...req.body, profilePhoto: base64Str });
 
     // Filtering out invalid field names
     const validUpdates = updates.filter((update) =>
