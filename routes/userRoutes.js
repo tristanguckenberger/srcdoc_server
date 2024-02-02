@@ -96,11 +96,12 @@ router.put(
         message:
           "You may not access other fields while activating or deactivating.",
       });
-    } else if (validUpdates?.includes("username") && validUpdates?.length > 1) {
-      return res.status(401).json({
-        message:
-          "You may not access other fields while updating your username.",
-      });
+      // }
+      //  else if (validUpdates?.includes("username") && validUpdates?.length > 1) {
+      //   return res.status(401).json({
+      //     message:
+      //       "You may not access other fields while updating your username.",
+      //   });
     } else if (validUpdates?.includes("email") && validUpdates?.length > 1) {
       return res.status(401).json({
         message: "You may not access other fields while updating your email.",
