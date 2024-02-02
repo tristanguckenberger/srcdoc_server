@@ -76,13 +76,14 @@ router.put(
       "bio",
       "isActive",
     ];
-    const updates = Object.keys(req.body);
 
     let base64;
     if (req.file) {
       const fileBuffer = req.file.buffer;
       base64 = fileBuffer.toString("base64");
     }
+
+    const updates = Object.keys({ ...req.body, profilePhoto: { ...req.file } });
 
     // Filtering out invalid field names
     const validUpdates = updates.filter((update) =>
