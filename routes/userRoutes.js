@@ -54,6 +54,10 @@ router.put(
   authenticate,
   upload.single("profilePhoto"),
   async (req, res, next) => {
+    console.log("req.body", req.body);
+    console.log("req.file", req.file);
+    console.log("req.params", req.params);
+    console.log("req.user", req.user);
     const { id } = req.params;
     const userId = req?.user?.id;
 
