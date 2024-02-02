@@ -146,6 +146,9 @@ router.put(
     queryStr += ` WHERE id = $${counter}`;
     queryValues.push(id);
 
+    console.log("queryStr:::::::::::::::::", queryStr);
+    console.log("queryValues:::::::::::::::::", queryValues);
+
     try {
       await query(queryStr, queryValues);
       res.status(200).json({ message: "User updated" });
