@@ -62,6 +62,9 @@ router.put(
     const userId = req?.user?.id;
 
     if (!userId || userId.toString() !== id.toString()) {
+      console.log("!userId || userId.toString() !== id.toString()");
+      console.log("userId", userId.toString());
+      console.log("id", id.toString());
       return res.status(401).json({ message: "Unauthorized" });
     }
 
