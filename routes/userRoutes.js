@@ -83,7 +83,7 @@ router.put(
       base64 = fileBuffer.toString("base64");
     }
 
-    const updates = Object.keys({ ...req.body, profilePhoto: `${base64}` });
+    const updates = Object.keys({ ...req.body, profilePhoto: base64 });
 
     // Filtering out invalid field names
     const validUpdates = updates.filter((update) =>
@@ -143,7 +143,7 @@ router.put(
         queryValues.push(base64);
       } else {
         queryStr += `${dbField} = $${counter}`;
-        queryValues.push(req.body[field]);
+        queryValues.push({ ...req.body, profilePhoto: base64 }[field]);
       }
 
       if (index < validUpdates.length - 1) {
