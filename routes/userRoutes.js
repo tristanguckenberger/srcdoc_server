@@ -139,15 +139,15 @@ router.put(
       if (field === "profilePhoto" || field === "profile_photo") {
         console.log('field === "profilePhoto" || field === "profile_photo"');
         console.log("field::", field);
-        console.log("validUpdates::base64::", base64);
+        console.log("validUpdates::base64::", base64Str);
       }
 
-      if (field === "profile_photo" && base64) {
+      if (field === "profile_photo" && base64Str) {
         queryStr += `${dbField} = $${counter}`;
-        queryValues.push(base64);
+        queryValues.push(base64Str);
       } else {
         queryStr += `${dbField} = $${counter}`;
-        queryValues.push({ ...req.body, profilePhoto: base64 }[field]);
+        queryValues.push(req.body[field]);
       }
 
       if (index < validUpdates.length - 1) {
