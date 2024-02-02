@@ -129,7 +129,7 @@ router.put(
           ? "is_active"
           : field;
 
-      if (field === "profilePhoto" && base64) {
+      if (field === "profile_photo" && base64) {
         queryStr += `${dbField} = $${counter}`;
         queryValues.push(base64);
       } else {
