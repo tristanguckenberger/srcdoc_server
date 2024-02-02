@@ -122,12 +122,20 @@ router.put(
     let counter = 1;
 
     validUpdates.forEach((field, index) => {
+      console.log("=======================");
+      console.log("validUpdates::field::", field);
       let dbField =
         field === "profilePhoto"
           ? "profile_photo"
           : field === "isActive"
           ? "is_active"
           : field;
+
+      if (field === "profilePhoto" || field === "profile_photo") {
+        console.log('field === "profilePhoto" || field === "profile_photo"');
+        console.log("field::", field);
+        console.log("validUpdates::base64::", base64);
+      }
 
       if (field === "profile_photo" && base64) {
         queryStr += `${dbField} = $${counter}`;
