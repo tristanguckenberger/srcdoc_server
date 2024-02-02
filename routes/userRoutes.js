@@ -83,7 +83,7 @@ router.put(
       base64 = fileBuffer.toString("base64");
     }
 
-    const updates = Object.keys({ ...req.body, profilePhoto: base64 });
+    const updates = Object.keys({ ...req.body, profilePhoto: `${base64}` });
 
     // Filtering out invalid field names
     const validUpdates = updates.filter((update) =>
