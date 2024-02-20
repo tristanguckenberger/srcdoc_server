@@ -137,4 +137,22 @@ router.get("/recent", async (req, res, next) => {
   }
 });
 
+// get all favorites, join on games, order DESC
+router.get("/topRated", async (req, res, next) => {
+  try {
+    const result = await query(
+      `
+          SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(favorites.game_id) AS play_count
+          FROM favorites
+          JOIN games ON favorites.game_id = games.id
+          GROUP BY favorites.game_id, games.id
+          ORDER BY play_count DESC
+            `
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
