@@ -158,4 +158,192 @@ router.get("/:gameId/sessions", async (req, res, next) => {
 // DELETE
 // Delete a game session
 
+// Game Session Activity ----------------------------------------------------
+
+// CREATE
+// Create a game session activity
+router.post(
+  "/:gameSessionId/activities/create",
+  authenticate,
+  async (req, res, next) => {
+    const { gameSessionId } = req.params;
+    const { action } = req.body;
+
+    if (!gameSessionId) {
+      return res
+        .status(401)
+        .json({ message: "Please provide a game session id" });
+    }
+
+    // Get the Game Session
+    const gameSession = await GameSession.findByGameSessionId(gameSessionId);
+    if (!gameSession) {
+      return res.status(404).json({ message: "Game session not found" });
+    }
+
+    try {
+      const result = await query(
+        "INSERT INTO game_user_activity (game_session_id, action) VALUES ($1, $2) RETURNING *",
+        [gameSessionId, action]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// READ
+// get an activity by activity id
+router.get("/activities/:gameUserActivityId", async (req, res, next) => {
+  const { gameUserActivityId } = req.params;
+
+  if (!gameUserActivityId) {
+    return res
+      .status(401)
+      .json({ message: "Please provide a game user activity id" });
+  }
+
+  try {
+    const result = await query(
+      "SELECT * FROM game_user_activity WHERE game_user_activity_id = $1",
+      [gameUserActivityId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Game user activity not found" });
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all activities by session id
+router.get("/:gameSessionId/activities", async (req, res, next) => {
+  const { gameSessionId } = req.params;
+
+  if (!gameSessionId) {
+    return res
+      .status(401)
+      .json({ message: "Please provide a game session id" });
+  }
+
+  try {
+    const result = await query(
+      "SELECT * FROM game_user_activity WHERE game_session_id = $1",
+      [gameSessionId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No game user activities found" });
+    }
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all activities
+router.get("/activities/all", async (req, res, next) => {
+  try {
+    const result = await query("SELECT * FROM game_user_activity");
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get all activities by user id
+router.get("/activities/user/:userId", async (req, res, next) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Please provide a user id" });
+  }
+
+  try {
+    const result = await query(
+      `
+          SELECT *
+          FROM game_user_activity AS gua
+          JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
+          WHERE gs.user_id = $1
+          `,
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No game user activities found" });
+    }
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get the current users activity
+router.get("/activities/current", authenticate, async (req, res, next) => {
+  const userId = req?.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const result = await query(
+      `
+            SELECT *
+            FROM game_user_activity AS gua
+            JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
+            WHERE gs.user_id = $1
+          `,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No game user activities found" });
+    }
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get the current users activity by game id
+router.get(
+  "/activities/current/:gameId",
+  authenticate,
+  async (req, res, next) => {
+    const userId = req?.user?.id;
+    const { gameId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!gameId) {
+      return res.status(401).json({ message: "Please provide a game id" });
+    }
+
+    try {
+      const result = await query(
+        `
+            SELECT *
+            FROM game_user_activity AS gua
+            JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
+            WHERE gs.user_id = $1 AND gs.game_id = $2
+          `,
+        [userId, gameId]
+      );
+
+      if (result.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No game user activities found" });
+      }
+      res.status(200).json(result.rows);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 module.exports = router;
