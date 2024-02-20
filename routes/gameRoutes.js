@@ -635,51 +635,6 @@ router.post(
 );
 
 // READ
-// Get a single game session by session ID
-router.get("/sessions/:gameSessionId", async (req, res, next) => {
-  const { gameSessionId } = req.params;
-
-  if (!gameSessionId) {
-    return res
-      .status(401)
-      .json({ message: "Please provide a game session id" });
-  }
-
-  try {
-    const result = await query(
-      "SELECT * FROM game_session WHERE game_session_id = $1",
-      [gameSessionId]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Game session not found" });
-    }
-    res.status(200).json(result.rows[0]);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get all game sessions by game ID
-router.get("/:gameId/sessions", async (req, res, next) => {
-  const { gameId } = req.params;
-
-  if (!gameId) {
-    return res.status(401).json({ message: "Please provide a game id" });
-  }
-
-  try {
-    const result = await query(
-      "SELECT * FROM game_session WHERE game_id = $1",
-      [gameId]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No game sessions found" });
-    }
-    res.status(200).json(result.rows);
-  } catch (error) {
-    next(error);
-  }
-});
 
 // Get all sessions
 router.get("/sessions", async (req, res, next) => {
@@ -745,6 +700,52 @@ router.put("/sessions/:gameSessionId", authenticate, async (req, res, next) => {
       [userId, sessionTotalTime, sessionTotalScore, gameSessionId]
     );
     res.status(201).json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get a single game session by session ID
+router.get("/sessions/:gameSessionId", async (req, res, next) => {
+  const { gameSessionId } = req.params;
+
+  if (!gameSessionId) {
+    return res
+      .status(401)
+      .json({ message: "Please provide a game session id" });
+  }
+
+  try {
+    const result = await query(
+      "SELECT * FROM game_session WHERE game_session_id = $1",
+      [gameSessionId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Game session not found" });
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all game sessions by game ID
+router.get("/:gameId/sessions", async (req, res, next) => {
+  const { gameId } = req.params;
+
+  if (!gameId) {
+    return res.status(401).json({ message: "Please provide a game id" });
+  }
+
+  try {
+    const result = await query(
+      "SELECT * FROM game_session WHERE game_id = $1",
+      [gameId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No game sessions found" });
+    }
+    res.status(200).json(result.rows);
   } catch (error) {
     next(error);
   }
