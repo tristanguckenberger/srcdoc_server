@@ -36,6 +36,44 @@ router.post("/:gameSessionId/create", authenticate, async (req, res, next) => {
   }
 });
 
+// get all activities
+router.get("/all", async (req, res, next) => {
+  try {
+    const result = await query("SELECT * FROM game_user_activity");
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// get the current users activity
+router.get("/current", authenticate, async (req, res, next) => {
+  const userId = req?.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const result = await query(
+      `
+                SELECT *
+                FROM game_user_activity AS gua
+                JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
+                WHERE gs.user_id = $1
+              `,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No game user activities found" });
+    }
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // READ
 // get an activity by activity id
 router.get("/:gameUserActivityId", async (req, res, next) => {
@@ -85,16 +123,6 @@ router.get("/:gameSessionId/all", async (req, res, next) => {
   }
 });
 
-// get all activities
-router.get("/all", async (req, res, next) => {
-  try {
-    const result = await query("SELECT * FROM game_user_activity");
-    res.status(200).json(result.rows);
-  } catch (error) {
-    next(error);
-  }
-});
-
 // get all activities by user id
 router.get("/user/:userId", async (req, res, next) => {
   const { userId } = req.params;
@@ -113,34 +141,6 @@ router.get("/user/:userId", async (req, res, next) => {
             `,
       [userId]
     );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No game user activities found" });
-    }
-    res.status(200).json(result.rows);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// get the current users activity
-router.get("/current", authenticate, async (req, res, next) => {
-  const userId = req?.user?.id;
-
-  if (!userId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  try {
-    const result = await query(
-      `
-              SELECT *
-              FROM game_user_activity AS gua
-              JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
-              WHERE gs.user_id = $1
-            `,
-      [userId]
-    );
-
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "No game user activities found" });
     }
