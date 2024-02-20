@@ -157,3 +157,5 @@ router.get("/:gameId/sessions", async (req, res, next) => {
 
 // DELETE
 // Delete a game session
+
+module.exports = router;
