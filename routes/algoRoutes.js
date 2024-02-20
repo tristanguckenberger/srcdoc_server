@@ -79,10 +79,9 @@ router.get("/topTrending/user/:userId", async (req, res, next) => {
       `
           SELECT game_id, COUNT(game_id) AS play_count
           FROM game_session
-          WHERE user_id = $1 AND created_at > NOW() - INTERVAL 30 DAY
+          WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 DAY'
           GROUP BY game_id
           ORDER BY play_count DESC
-          LIMIT 10
         `,
       [userId]
     );
