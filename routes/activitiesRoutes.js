@@ -26,13 +26,30 @@ router.post("/:gameSessionId/create", authenticate, async (req, res, next) => {
   }
 
   // Ensure an activity with the same action AND game session id doesn't already exist
-  const existingActivity = await query(
-    "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = $2",
-    [gameSessionId, action]
+  const existingStartActivity = await query(
+    "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = 'Start'",
+    [gameSessionId]
   );
 
-  if (existingActivity.rows.length > 0) {
-    return res.status(400).json({ message: "Activity already exists" });
+  if (existingStartActivity.rows.length > 0 && action === "Start") {
+    return res
+      .status(400)
+      .json({
+        message: `Start activity already exists for game session, ${gameSessionId}`,
+      });
+  }
+
+  const existingStopActivity = await query(
+    "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = 'Stop'",
+    [gameSessionId]
+  );
+
+  if (existingStopActivity.rows.length > 0 && action === "Stop") {
+    return res
+      .status(400)
+      .json({
+        message: `Stop activity already exists for game session, ${gameSessionId}`,
+      });
   }
 
   try {
