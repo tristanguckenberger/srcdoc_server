@@ -25,6 +25,16 @@ router.post("/:gameSessionId/create", authenticate, async (req, res, next) => {
     return res.status(404).json({ message: "Game session not found" });
   }
 
+  // Ensure an activity with the same action AND game session id doesn't already exist
+  const existingActivity = await query(
+    "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = $2",
+    [gameSessionId, action]
+  );
+
+  if (existingActivity.rows.length > 0) {
+    return res.status(400).json({ message: "Activity already exists" });
+  }
+
   try {
     const result = await query(
       "INSERT INTO game_user_activity (game_session_id, action) VALUES ($1, $2) RETURNING *",
