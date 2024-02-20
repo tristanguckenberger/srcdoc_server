@@ -58,7 +58,6 @@ router.get("/topTrending", async (req, res, next) => {
           WHERE created_at > NOW() - INTERVAL '5 days'
           GROUP BY game_id
           ORDER BY play_count DESC
-          LIMIT 10
         `
     );
     res.status(200).json(result.rows);
