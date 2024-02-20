@@ -32,11 +32,9 @@ router.post("/:gameSessionId/create", authenticate, async (req, res, next) => {
   );
 
   if (existingStartActivity.rows.length > 0 && action === "Start") {
-    return res
-      .status(400)
-      .json({
-        message: `Start activity already exists for game session, ${gameSessionId}`,
-      });
+    return res.status(400).json({
+      message: `Start activity already exists for game session, ${gameSessionId}`,
+    });
   }
 
   const existingStopActivity = await query(
@@ -45,11 +43,9 @@ router.post("/:gameSessionId/create", authenticate, async (req, res, next) => {
   );
 
   if (existingStopActivity.rows.length > 0 && action === "Stop") {
-    return res
-      .status(400)
-      .json({
-        message: `Stop activity already exists for game session, ${gameSessionId}`,
-      });
+    return res.status(400).json({
+      message: `Stop activity already exists for game session, ${gameSessionId}`,
+    });
   }
 
   try {
@@ -193,11 +189,11 @@ router.get("/current/:gameId", authenticate, async (req, res, next) => {
   try {
     const result = await query(
       `
-              SELECT *
-              FROM game_user_activity AS gua
-              JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
-              WHERE gs.user_id = $1 AND gs.game_id = $2
-            `,
+        SELECT *
+        FROM game_user_activity AS gua
+        JOIN game_session AS gs ON gua.game_session_id = gs.game_session_id
+        WHERE gs.user_id = $1 AND gs.game_id = $2
+    `,
       [userId, gameId]
     );
 
