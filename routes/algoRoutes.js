@@ -9,7 +9,7 @@ router.get("/topPlayed", async (req, res, next) => {
   try {
     const result = await query(
       `
-      SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+      SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
       FROM game_session
       JOIN games ON game_session.game_id = games.id
       GROUP BY game_session.game_id, games.id
@@ -33,7 +33,7 @@ router.get("/topPlayed/user/:userId", async (req, res, next) => {
   try {
     const result = await query(
       `
-      SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+      SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
       FROM game_session
       JOIN games ON game_session.game_id = games.id
       GROUP BY game_session.game_id, games.id
@@ -52,7 +52,7 @@ router.get("/topTrending", async (req, res, next) => {
   try {
     const result = await query(
       `
-        SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+        SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
         FROM game_session
         JOIN games ON game_session.game_id = games.id
         WHERE game_session.created_at > NOW() - INTERVAL '5 days'
@@ -77,7 +77,7 @@ router.get("/topTrending/user/:userId", async (req, res, next) => {
   try {
     const result = await query(
       `
-          SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+          SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
           FROM game_session
           JOIN games ON game_session.game_id = games.id
           WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 days'
