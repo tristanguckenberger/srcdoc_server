@@ -62,7 +62,6 @@ app.use("/api/comments", commentsRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/reviews", reviewsRoutes);
 app.use("/api/issues", issuesRoutes);
-// app.use("/api/tags", tagsRoutes);
 app.use("/api/sessions", gameSessionRoutes);
 app.use("/api/activities", activitiesRoutes);
 app.use("/api/algo", algoRoutes);
