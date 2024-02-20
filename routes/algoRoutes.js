@@ -9,11 +9,11 @@ router.get("/topPlayed", async (req, res, next) => {
   try {
     const result = await query(
       `
-          SELECT game_id, COUNT(game_id) AS play_count
-          FROM game_session
-          GROUP BY game_id
-          ORDER BY play_count DESC
-          LIMIT 10
+      SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+      FROM game_session
+      JOIN games ON game_session.game_id = games.id
+      GROUP BY game_session.game_id, games.id
+      ORDER BY play_count DESC
         `
     );
     res.status(200).json(result.rows);
@@ -33,12 +33,11 @@ router.get("/topPlayed/user/:userId", async (req, res, next) => {
   try {
     const result = await query(
       `
-          SELECT game_id, COUNT(game_id) AS play_count
-          FROM game_session
-          WHERE user_id = $1
-          GROUP BY game_id
-          ORDER BY play_count DESC
-          LIMIT 10
+      SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+      FROM game_session
+      JOIN games ON game_session.game_id = games.id
+      GROUP BY game_session.game_id, games.id
+      ORDER BY play_count DESC
         `,
       [userId]
     );
@@ -53,12 +52,13 @@ router.get("/topTrending", async (req, res, next) => {
   try {
     const result = await query(
       `
-          SELECT game_id, COUNT(game_id) AS play_count
-          FROM game_session
-          WHERE created_at > NOW() - INTERVAL '5 days'
-          GROUP BY game_id
-          ORDER BY play_count DESC
-        `
+        SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
+        FROM game_session
+        JOIN games ON game_session.game_id = games.id
+        WHERE game_session.created_at > NOW() - INTERVAL '5 days'
+        GROUP BY game_session.game_id, games.id
+        ORDER BY play_count DESC
+    `
     );
     res.status(200).json(result.rows);
   } catch (error) {
@@ -77,10 +77,11 @@ router.get("/topTrending/user/:userId", async (req, res, next) => {
   try {
     const result = await query(
       `
-          SELECT game_id, COUNT(game_id) AS play_count
+          SELECT games.id, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_id) AS play_count
           FROM game_session
+          JOIN games ON game_session.game_id = games.id
           WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 days'
-          GROUP BY game_id
+          GROUP BY game_session.game_id, games.id
           ORDER BY play_count DESC
         `,
       [userId]
