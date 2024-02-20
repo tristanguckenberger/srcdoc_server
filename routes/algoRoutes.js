@@ -49,19 +49,17 @@ router.get("/topPlayed/user/:userId", async (req, res, next) => {
 });
 
 // get top trending games (top games in the last 30 days)
-router.get("/topTrending/:timeFrame", async (req, res, next) => {
-  const { timeFrame = 30 } = req.params;
+router.get("/topTrending", async (req, res, next) => {
   try {
     const result = await query(
       `
           SELECT game_id, COUNT(game_id) AS play_count
           FROM game_session
-          WHERE created_at > NOW() - INTERVAL $1 DAY
+          WHERE created_at > NOW() - INTERVAL 30 DAY
           GROUP BY game_id
           ORDER BY play_count DESC
           LIMIT 10
-        `,
-      [timeFrame]
+        `
     );
     res.status(200).json(result.rows);
   } catch (error) {
