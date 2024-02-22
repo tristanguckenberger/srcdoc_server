@@ -40,10 +40,45 @@ router.post("/create", authenticate, placeholder, async (req, res, next) => {
 });
 
 // Get All Games
+// router.get("/all", async (req, res, next) => {
+//   try {
+//     const result = await query("SELECT * FROM games");
+//     res.status(200).json(result.rows);
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+
+// Get All Games with Cursor-based Pagination
 router.get("/all", async (req, res, next) => {
+  // The cursor passed from the client, defaulting to 0 if not provided
+  const cursor = parseInt(req.query.cursor) || 0;
+
+  // The number of games to fetch, defaulting to a predefined limit if not provided
+  const limit = parseInt(req.query.limit) || 10;
+
   try {
-    const result = await query("SELECT * FROM games");
-    res.status(200).json(result.rows);
+    // Select games where the ID is greater than the cursor
+    // Order by ID to ensure consistent results
+    // Limit the number of results to the specified limit
+    const queryText = `
+      SELECT * FROM games
+      WHERE id > $1
+      ORDER BY id ASC
+      LIMIT $2
+    `;
+
+    const result = await query(queryText, [cursor, limit]);
+
+    // Respond with the fetched games and the new cursor
+    // The new cursor will be the ID of the last game in the result set
+    const newCursor =
+      result.rows.length > 0 ? result.rows[result.rows.length - 1].id : cursor;
+
+    res.status(200).json({
+      games: result.rows,
+      nextCursor: newCursor,
+    });
   } catch (error) {
     next(error);
   }
