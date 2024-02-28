@@ -37,6 +37,13 @@ router.post("/:gameSessionId/create", authenticate, async (req, res, next) => {
     });
   }
 
+  // If the action is "Stop", ensure the game session is active by first checking if there is an existing start activity
+  if (existingStartActivity.rows.length > 0 && action === "Stop") {
+    return res.status(400).json({
+      message: `Unable to stop session, ${gameSessionId}, which has not called the 'Start' activity.`,
+    });
+  }
+
   const existingStopActivity = await query(
     "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = 'Stop'",
     [gameSessionId]
