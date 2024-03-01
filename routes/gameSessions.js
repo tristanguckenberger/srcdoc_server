@@ -78,10 +78,6 @@ router.put("/:gameSessionId", authenticate, async (req, res, next) => {
   const { gameSessionId } = req.params;
   const userId = req?.user?.id;
 
-  if (!userId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
   if (!gameSessionId) {
     return res
       .status(401)
@@ -93,15 +89,50 @@ router.put("/:gameSessionId", authenticate, async (req, res, next) => {
     return res.status(404).json({ message: "Game session not found" });
   }
 
-  const {
+  const existingStartActivity = await query(
+    "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = 'Start'",
+    [gameSessionId]
+  );
+
+  if (existingStartActivity.rows.length === 0) {
+    return res.status(400).json({
+      message: "Cannot update a game session without a start activity",
+    });
+  }
+
+  let {
     sessionTotalTime = gameSession?.sessionTotalTime,
     sessionTotalScore = gameSession?.sessionTotalScore,
   } = req.body;
 
+  // if theres no session total time, we need to calculate it
+  if (!sessionTotalTime) {
+    // get start AND stop times
+    let stopTime = await query(
+      "SELECT * FROM game_user_activity WHERE game_session_id = $1 AND action = 'Stop'",
+      [gameSessionId]
+    );
+
+    // if there's no start time, we can go ahead and create one
+    if (stopTime.rows.length === 0) {
+      const addStopTime = await query(
+        "INSERT INTO game_user_activity (game_session_id, action) VALUES ($1, $2) RETURNING *",
+        [gameSessionId, "Stop"]
+      );
+      stopTime = addStopTime.rows[0];
+    } else {
+      stopTime = stopTime.rows[0];
+    }
+
+    // calculate total time from start to stop
+    sessionTotalTime =
+      stopTime.created_at - existingStartActivity.rows[0].created_at;
+  }
+
   try {
     const result = await query(
-      "UPDATE game_session SET user_id = $1, session_total_time = $2, session_total_score = $3, WHERE game_session_id = $4 RETURNING *",
-      [userId, sessionTotalTime, sessionTotalScore, gameSessionId]
+      "UPDATE game_session SET session_total_time = $1, session_total_score = $2 WHERE game_session_id = $3 RETURNING *",
+      [sessionTotalTime, sessionTotalScore, gameSessionId]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
