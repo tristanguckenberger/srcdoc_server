@@ -2,6 +2,7 @@ const express = require("express");
 const { query } = require("../config/db");
 const Game = require("../models/Game");
 const GameSession = require("../models/GameSession");
+const Leaderboards = require("../models/Leaderboards");
 const Tag = require("../models/Tag");
 const File = require("../models/File");
 const { authenticate } = require("../middleware/auth");
@@ -631,5 +632,22 @@ router.delete(
     }
   }
 );
+
+// Game Leaderboards -------------------------------------------------------
+// get ranked list of sessions by game id, based on score
+router.get("/:gameId/leaderboards", async (req, res, next) => {
+  const { gameId } = req.params;
+
+  if (!gameId) {
+    return res.status(401).json({ message: "Please provide a game id" });
+  }
+
+  try {
+    const result = await Leaderboards.getAllRowsByGameId(gameId);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = router;
