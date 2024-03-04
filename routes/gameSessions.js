@@ -124,9 +124,69 @@ router.put("/:gameSessionId", authenticate, async (req, res, next) => {
       stopTime = stopTime.rows[0];
     }
 
-    // calculate total time from start to stop
-    sessionTotalTime =
-      stopTime.created_at - existingStartActivity.rows[0].created_at;
+    const startTime = new Date(existingStartActivity.rows[0].created_at);
+    const endTime = new Date(stopTime.created_at);
+
+    sessionTotalTime = endTime - startTime;
+
+    const differenceInMilliseconds = endTime - startTime;
+    const differenceInSeconds = differenceInMilliseconds / 1000;
+    const differenceInMinutes = differenceInSeconds / 60;
+    const differenceInHours = differenceInMinutes / 60;
+    const millisecondsInASecond = 1000;
+    const secondsInAMinute = 60;
+    const minutesInAnHour = 60;
+    const hoursInADay = 24;
+
+    // First, calculate the total number of days
+    const days = Math.floor(
+      differenceInMilliseconds /
+        (millisecondsInASecond *
+          secondsInAMinute *
+          minutesInAnHour *
+          hoursInADay)
+    );
+
+    // Calculate the remainder for hours calculation
+    const hoursRemainder =
+      differenceInMilliseconds %
+      (millisecondsInASecond *
+        secondsInAMinute *
+        minutesInAnHour *
+        hoursInADay);
+
+    // Calculate the total number of hours
+    const hours = Math.floor(
+      hoursRemainder /
+        (millisecondsInASecond * secondsInAMinute * minutesInAnHour)
+    );
+
+    // Calculate the remainder for minutes calculation
+    const minutesRemainder =
+      hoursRemainder %
+      (millisecondsInASecond * secondsInAMinute * minutesInAnHour);
+
+    // Calculate the total number of minutes
+    const minutes = Math.floor(
+      minutesRemainder / (millisecondsInASecond * secondsInAMinute)
+    );
+
+    // Calculate the remainder for seconds calculation
+    const secondsRemainder =
+      minutesRemainder % (millisecondsInASecond * secondsInAMinute);
+
+    // Calculate the total number of seconds
+    const seconds = Math.floor(secondsRemainder / millisecondsInASecond);
+
+    // The remainder now are the milliseconds
+    const milliseconds = secondsRemainder % millisecondsInASecond;
+
+    // Format the output
+    sessionTotalTime = `${days.toString().padStart(2, "0")}d:${hours
+      .toString()
+      .padStart(2, "0")}h:${minutes.toString().padStart(2, "0")}m:${seconds
+      .toString()
+      .padStart(2, "0")}s:${milliseconds.toString().padStart(3, "0")}ms`;
   }
 
   try {
