@@ -4,6 +4,7 @@ const Playlist = require("../models/Playlist");
 const { authenticate } = require("../middleware/auth");
 const router = express.Router();
 
+// CREATE ENDPOINTS -------------------------------------------------
 // Create a new playlist
 router.post("/create", authenticate, async (req, res, next) => {
   const ownerId = req?.user?.id;
@@ -25,6 +26,43 @@ router.post("/create", authenticate, async (req, res, next) => {
     await query(
       `INSERT INTO user_playlist (playlist_id, user_id) VALUES ($1, $2) RETURNING *`,
       [playlistId, ownerId]
+    );
+
+    res.status(201).json(newPlaylist.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Create a new playlist from an existing playlist
+router.post("/create/:playlistId", authenticate, async (req, res, next) => {
+  const ownerId = req?.user?.id;
+  const playlistId = req.params.playlistId;
+  const { name, description, isPublic } = req.body;
+  const isCategory = false;
+
+  if (!ownerId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const newPlaylist = await query(
+      `INSERT INTO playlist (owner_id, name, description, is_public, is_category) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [ownerId, name, description, isPublic, isCategory]
+    );
+    const newPlaylistId = newPlaylist.rows[0].id;
+
+    const games = await Playlist.getAllGamesForSinglePlaylist(playlistId, next);
+    for (let i = 0; i < games.length; i++) {
+      await query(
+        `INSERT INTO game_playlist (playlist_id, game_id) VALUES ($1, $2) RETURNING *`,
+        [newPlaylistId, games[i].id]
+      );
+    }
+
+    await query(
+      `INSERT INTO user_playlist (playlist_id, user_id) VALUES ($1, $2) RETURNING *`,
+      [newPlaylistId, ownerId]
     );
 
     res.status(201).json(newPlaylist.rows[0]);
@@ -81,41 +119,6 @@ router.post(
   }
 );
 
-// Remove a game from a playlist (game_playlist)
-router.delete(
-  "/:playlistId/remove/:gameId",
-  authenticate,
-  async (req, res, next) => {
-    const playlistId = req.params.playlistId;
-    const gameId = req.params.gameId;
-    const potentialOwnerId = req?.user?.id;
-
-    if (!playlistId || !gameId || !potentialOwnerId) {
-      return res.status(400).json({ error: "Invalid request" });
-    }
-
-    const playlist = await Playlist.findById(playlistId);
-
-    if (!playlist) {
-      return res.status(404).json({ error: "Playlist not found" });
-    }
-
-    if (playlist.owner_id !== potentialOwnerId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    try {
-      await query(
-        `DELETE FROM game_playlist WHERE playlist_id = $1 AND game_id = $2`,
-        [playlistId, gameId]
-      );
-      res.status(200).json({ message: "Game removed from playlist" });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
 // Add a playlist to a users library
 router.post("/:playlistId/add", authenticate, async (req, res, next) => {
   const playlistId = req.params.playlistId;
@@ -154,61 +157,7 @@ router.post("/:playlistId/add", authenticate, async (req, res, next) => {
   }
 });
 
-// Remove a playlist from a users library
-router.delete("/:playlistId/remove", authenticate, async (req, res, next) => {
-  const playlistId = req.params.playlistId;
-  const userId = req?.user?.id;
-
-  if (!playlistId || !userId) {
-    return res.status(400).json({ error: "Invalid request" });
-  }
-
-  try {
-    await query(
-      `DELETE FROM user_playlist WHERE playlist_id = $1 AND user_id = $2`,
-      [playlistId, userId]
-    );
-    res.status(200).json({ message: "Playlist removed from library" });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Update a playlist
-router.put("/:playlistId", authenticate, async (req, res, next) => {
-  const playlistId = req.params.playlistId;
-  const ownerId = req?.user?.id;
-  const { name, description, isPublic } = req.body;
-
-  if (!playlistId || !ownerId) {
-    return res.status(400).json({ error: "Invalid request" });
-  }
-
-  const playlist = await Playlist.findById(playlistId);
-
-  if (!playlist || playlist.owner_id !== ownerId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  try {
-    // if isPublic is false but there are records in user_playlist, delete them
-    if (!isPublic) {
-      await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
-        playlistId,
-      ]);
-    }
-
-    const updatedPlaylist = await query(
-      `UPDATE playlist SET name = $1, description = $2, is_public = $3 WHERE id = $4 AND owner_id = $5 RETURNING *`,
-      [name, description, isPublic, playlistId, ownerId]
-    );
-
-    res.status(200).json(updatedPlaylist.rows[0]);
-  } catch (error) {
-    next(error);
-  }
-});
-
+// READ ENDPOINTS -------------------------------------------------
 // Get a single playlist by its id
 router.get("/:playlistId", async (req, res, next) => {
   const playlistId = req.params.playlistId;
@@ -282,6 +231,96 @@ router.get("/:playlistId/games", async (req, res, next) => {
   }
 });
 
+// UPDATE ENDPOINTS -------------------------------------------------
+// Update a playlist
+router.put("/:playlistId", authenticate, async (req, res, next) => {
+  const playlistId = req.params.playlistId;
+  const ownerId = req?.user?.id;
+  const { name, description, isPublic } = req.body;
+
+  if (!playlistId || !ownerId) {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+
+  if (!playlist || playlist.owner_id !== ownerId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    // if isPublic is false but there are records in user_playlist, delete them
+    if (!isPublic) {
+      await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
+        playlistId,
+      ]);
+    }
+
+    const updatedPlaylist = await query(
+      `UPDATE playlist SET name = $1, description = $2, is_public = $3 WHERE id = $4 AND owner_id = $5 RETURNING *`,
+      [name, description, isPublic, playlistId, ownerId]
+    );
+
+    res.status(200).json(updatedPlaylist.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE ENDPOINTS -------------------------------------------------
+// Remove a game from a playlist (game_playlist)
+router.delete(
+  "/:playlistId/remove/:gameId",
+  authenticate,
+  async (req, res, next) => {
+    const playlistId = req.params.playlistId;
+    const gameId = req.params.gameId;
+    const potentialOwnerId = req?.user?.id;
+
+    if (!playlistId || !gameId || !potentialOwnerId) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    const playlist = await Playlist.findById(playlistId);
+
+    if (!playlist) {
+      return res.status(404).json({ error: "Playlist not found" });
+    }
+
+    if (playlist.owner_id !== potentialOwnerId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      await query(
+        `DELETE FROM game_playlist WHERE playlist_id = $1 AND game_id = $2`,
+        [playlistId, gameId]
+      );
+      res.status(200).json({ message: "Game removed from playlist" });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+// Remove a playlist from a users library
+router.delete("/:playlistId/remove", authenticate, async (req, res, next) => {
+  const playlistId = req.params.playlistId;
+  const userId = req?.user?.id;
+
+  if (!playlistId || !userId) {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+
+  try {
+    await query(
+      `DELETE FROM user_playlist WHERE playlist_id = $1 AND user_id = $2`,
+      [playlistId, userId]
+    );
+    res.status(200).json({ message: "Playlist removed from library" });
+  } catch (error) {
+    next(error);
+  }
+});
 // Delete a single playlist
 router.delete("/:playlistId", authenticate, async (req, res, next) => {
   const playlistId = req.params.playlistId;
