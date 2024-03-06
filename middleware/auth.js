@@ -7,16 +7,13 @@ dotenv.config();
 exports.authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header("Authorization");
-    console.log("authHeader", authHeader);
     if (!authHeader) {
-      console.log("no authHeader");
       return res
         .status(401)
         .json({ message: "Access denied. No token provided." });
     }
 
     const parts = authHeader.split(" ");
-
     if (parts.length !== 2 || parts[0] !== "Bearer") {
       return res.status(401).json({ message: "Invalid token format." });
     }
