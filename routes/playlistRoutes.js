@@ -167,7 +167,7 @@ router.get("/:playlistId", async (req, res, next) => {
   }
 
   try {
-    const games = await Playlist.getSinglePlaylist(playlistId);
+    const games = await Playlist.getSinglePlaylist(playlistId, next);
 
     res.status(200).json(games);
   } catch (error) {
@@ -197,7 +197,7 @@ router.get("/user/:userId", async (req, res, next) => {
 });
 
 // Get all playlists in a users library (user_playlist)
-router.get("/library/:userId", authenticate, async (req, res, next) => {
+router.get("/get/library", authenticate, async (req, res, next) => {
   const userId = req?.user?.id;
 
   if (!userId) {

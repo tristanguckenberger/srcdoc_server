@@ -18,6 +18,7 @@ const activitiesRoutes = require("./routes/activitiesRoutes");
 const algoRoutes = require("./routes/algoRoutes");
 const playlistRoutes = require("./routes/playlistRoutes");
 const gamesPlaylistRoutes = require("./routes/gamesPlaylistRoutes");
+const searchRoutes = require("./routes/searchRoute");
 
 const errorHandler = require("./middleware/errorHandler");
 const winston = require("winston");
@@ -68,6 +69,7 @@ app.use("/api/sessions", gameSessionRoutes);
 app.use("/api/activities", activitiesRoutes);
 app.use("/api/algo", algoRoutes);
 app.use("/api/playlist", playlistRoutes);
+app.use("/api/search", searchRoutes);
 // app.use("/api/gamesPlaylist", gamesPlaylistRoutes);
 
 // Error Handling Middleware
