@@ -87,7 +87,7 @@ class Playlist {
   static async getAllGamesForSinglePlaylist(playlistId, next) {
     try {
       const games = await query(
-        `SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_session_id) AS play_count FROM games JOIN game_playlist ON games.id = game_playlist.game_id LEFT JOIN game_session ON games.id = game_session.game_id WHERE game_playlist.playlist_id = $1 GROUP BY games.id`,
+        `SELECT games.id, games.title, games.description, games.published, games.thumbnail, games.user_id, games.created_at, games.updated_at, COUNT(game_session.game_session_id) AS play_count, game_playlist.item_order FROM games JOIN game_playlist ON games.id = game_playlist.game_id LEFT JOIN game_session ON games.id = game_session.game_id WHERE game_playlist.playlist_id = $1 GROUP BY games.id, game_playlist.item_order ORDER BY game_playlist.item_order ASC`,
         [playlistId]
       );
       const updatedGames = await Promise.all(

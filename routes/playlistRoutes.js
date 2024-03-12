@@ -233,10 +233,10 @@ router.get("/:playlistId/games", async (req, res, next) => {
 
 // UPDATE ENDPOINTS -------------------------------------------------
 // Update a playlist
+// Update a playlist and optionally update the order of items in it
 router.put("/:playlistId", authenticate, async (req, res, next) => {
   const playlistId = req.params.playlistId;
   const ownerId = req?.user?.id;
-  const { name, description, isPublic } = req.body;
 
   if (!playlistId || !ownerId) {
     return res.status(400).json({ error: "Invalid request" });
@@ -248,8 +248,15 @@ router.put("/:playlistId", authenticate, async (req, res, next) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  const {
+    name = playlist.name ?? "",
+    description = playlist.description ?? "",
+    isPublic = playlist.isPublic,
+    gamesOrder,
+  } = req.body; // Added gamesOrder to the destructured parameters
+
   try {
-    // if isPublic is false but there are records in user_playlist, delete them
+    // Handle non-order-related updates first
     if (!isPublic) {
       await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
         playlistId,
@@ -261,8 +268,25 @@ router.put("/:playlistId", authenticate, async (req, res, next) => {
       [name, description, isPublic, playlistId, ownerId]
     );
 
+    // Now, handle the order update if gamesOrder is provided
+    if (Array.isArray(gamesOrder) && gamesOrder.length > 0) {
+      // Begin a transaction to ensure atomicity
+      await query("BEGIN");
+
+      for (let i = 0; i < gamesOrder.length; i++) {
+        console.log("gamesOrder[i]::", gamesOrder[i]);
+        await query(
+          `UPDATE game_playlist SET item_order = $1 WHERE playlist_id = $2 AND game_id = $3`,
+          [i + 1, playlistId, gamesOrder[i]] // Set the order based on the array index + 1 for SQL indexing
+        );
+      }
+
+      await query("COMMIT"); // Commit the transaction if all updates succeed
+    }
+
     res.status(200).json(updatedPlaylist.rows[0]);
   } catch (error) {
+    await query("ROLLBACK"); // Roll back the transaction in case of error
     next(error);
   }
 });

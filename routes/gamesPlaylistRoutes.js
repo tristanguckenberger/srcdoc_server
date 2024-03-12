@@ -26,3 +26,27 @@ router.post(
     }
   }
 );
+
+// Update the order of games in a playlist
+// router.put(
+//   "/:playlistId/update",
+//   authenticate,
+//   async (req, res, next) => {
+//     const playlistId = req.params.playlistId;
+//     const gameIds = req.body.gameIds;
+
+//     if (!playlistId || !gameIds) {
+//       return res.status(400).json({ error: "Invalid request" });
+//     }
+
+//     try {
+//       const updatedGamePlaylist = await query(
+//         `UPDATE game_playlist SET order_id = idx FROM (SELECT unnest($2::int[]) WITH ORDINALITY AS t(id, idx) WHERE id IS NOT NULL) AS x WHERE game_id = x.id AND playlist_id = $1`,
+//         [playlistId, gameIds]
+//       );
+//       res.status(200).json(updatedGamePlaylist.rows);
+//     } catch (error) {
+//       next(error);
+//     }
+//   }
+// );
