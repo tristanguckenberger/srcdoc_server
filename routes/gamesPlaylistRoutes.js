@@ -4,28 +4,55 @@ const { authenticate } = require("../middleware/auth");
 const router = express.Router();
 
 // Add a game to a playlist (game_playlist)
-router.post(
-  "/:playlistId/add/:gameId",
-  authenticate,
-  async (req, res, next) => {
-    const playlistId = req.params.playlistId;
-    const gameId = req.params.gameId;
+// router.post(
+//   "/:playlistId/add/:gameId",
+//   authenticate,
+//   async (req, res, next) => {
+//     const playlistId = req.params.playlistId;
+//     const gameId = req.params.gameId;
 
-    if (!playlistId || !gameId) {
-      return res.status(400).json({ error: "Invalid request" });
-    }
+//     console.log("playlistId::", playlistId);
+//     console.log("gameId::", gameId);
 
-    try {
-      const newGamePlaylist = await query(
-        `INSERT INTO game_playlist (playlist_id, game_id) VALUES ($1, $2) RETURNING *`,
-        [playlistId, gameId]
-      );
-      res.status(201).json(newGamePlaylist.rows[0]);
-    } catch (error) {
-      next(error);
-    }
-  }
-);
+//     if (!playlistId || !gameId) {
+//       return res.status(400).json({ error: "Invalid request" });
+//     }
+
+//     try {
+//       const newGamePlaylist = await query(
+//         `INSERT INTO game_playlist (playlist_id, game_id) VALUES ($1, $2) RETURNING *`,
+//         [playlistId, gameId]
+//       );
+//       res.status(201).json(newGamePlaylist.rows[0]);
+//     } catch (error) {
+//       next(error);
+//     }
+//   }
+// );
+
+// // Remove a game from a playlist (game_playlist)
+// router.delete(
+//   "/:playlistId/remove/:gameId",
+//   authenticate,
+//   async (req, res, next) => {
+//     const playlistId = req.params.playlistId;
+//     const gameId = req.params.gameId;
+
+//     if (!playlistId || !gameId) {
+//       return res.status(400).json({ error: "Invalid request" });
+//     }
+
+//     try {
+//       const deletedGamePlaylist = await query(
+//         `DELETE FROM game_playlist WHERE playlist_id = $1 AND game_id = $2 RETURNING *`,
+//         [playlistId, gameId]
+//       );
+//       res.status(200).json(deletedGamePlaylist.rows[0]);
+//     } catch (error) {
+//       next(error);
+//     }
+//   }
+// );
 
 // Update the order of games in a playlist
 // router.put(

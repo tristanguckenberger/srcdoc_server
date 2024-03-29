@@ -130,7 +130,7 @@ router.post("/:playlistId/add", authenticate, async (req, res, next) => {
 
   const playlist = await Playlist.findById(playlistId);
 
-  if (!playlist.is_public && playlist.owner_id !== userId) {
+  if (playlist.owner_id?.toString() !== userId?.toString()) {
     return res.status(401).json({ error: "Private Playlist: Unauthorized" });
   }
 
@@ -206,7 +206,7 @@ router.get("/get/library", authenticate, async (req, res, next) => {
 
   try {
     const playlists = await Playlist.getAllPlaylistsInLibrary(userId, next);
-
+    console.log("playlists::", playlists);
     res.status(200).json(playlists);
   } catch (error) {
     next(error);
@@ -257,11 +257,11 @@ router.put("/:playlistId", authenticate, async (req, res, next) => {
 
   try {
     // Handle non-order-related updates first
-    if (!isPublic) {
-      await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
-        playlistId,
-      ]);
-    }
+    // if (!isPublic) {
+    //   await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
+    //     playlistId,
+    //   ]);
+    // }
 
     const updatedPlaylist = await query(
       `UPDATE playlist SET name = $1, description = $2, is_public = $3 WHERE id = $4 AND owner_id = $5 RETURNING *`,
