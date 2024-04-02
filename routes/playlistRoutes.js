@@ -213,6 +213,16 @@ router.get("/get/library", authenticate, async (req, res, next) => {
   }
 });
 
+// Get all playlists where isCategory is true
+router.get("/categories/all", async (req, res, next) => {
+  try {
+    const categories = await Playlist.getAllCategories(next);
+    res.status(200).json(categories);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all games for a playlist
 router.get("/:playlistId/games", async (req, res, next) => {
   const playlistId = req.params.playlistId;

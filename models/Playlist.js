@@ -23,6 +23,17 @@ class Playlist {
     this.updatedAt = updatedAt;
   }
 
+  static async getAllCategories(next) {
+    try {
+      const categories = await query(
+        `SELECT * FROM playlist WHERE is_category = true AND is_public = true`
+      );
+      return categories.rows;
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async findById(id) {
     try {
       const playlist = await query(
