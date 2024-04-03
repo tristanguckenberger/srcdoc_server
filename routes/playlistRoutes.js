@@ -162,7 +162,7 @@ router.post("/:playlistId/add", authenticate, async (req, res, next) => {
 
 // READ ENDPOINTS -------------------------------------------------
 // Get a single playlist by its id
-router.get("/:playlistId", authenticate, async (req, res, next) => {
+router.get("/:playlistId", async (req, res, next) => {
   const playlistId = req.params.playlistId;
   const user = req?.user;
 
