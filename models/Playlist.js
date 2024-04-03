@@ -6,6 +6,7 @@ class Playlist {
     ownerId,
     name,
     description,
+    thumbnail,
     userId,
     isPublic,
     isCategory,
@@ -16,6 +17,7 @@ class Playlist {
     this.ownerId = ownerId;
     this.name = name;
     this.description = description;
+    this.thumbnail = thumbnail;
     this.userId = userId;
     this.isPublic = isPublic;
     this.isCategory = isCategory;
@@ -50,7 +52,7 @@ class Playlist {
   static async getSinglePlaylist(playlistId, next, userId) {
     try {
       const playlist = await query(
-        `SELECT playlist.id, playlist.owner_id, users.username AS ownername, playlist.name, playlist.description, playlist.is_public, playlist.is_category, playlist.created_at, playlist.updated_at FROM playlist JOIN users ON playlist.owner_id = users.id WHERE playlist.id = $1`,
+        `SELECT playlist.id, playlist.owner_id, users.username AS ownername, playlist.name, playlist.description, playlist.thumbnail, playlist.is_public, playlist.is_category, playlist.created_at, playlist.updated_at FROM playlist JOIN users ON playlist.owner_id = users.id WHERE playlist.id = $1`,
         [playlistId]
       );
 
@@ -86,7 +88,7 @@ class Playlist {
   static async getAllPlaylistsInLibrary(userId, next) {
     try {
       const playlists = await query(
-        `SELECT playlist.id, playlist.owner_id, playlist.name, playlist.description, playlist.is_public, playlist.is_category, playlist.created_at, playlist.updated_at FROM playlist JOIN user_playlist ON playlist.id = user_playlist.playlist_id WHERE user_id = $1`,
+        `SELECT playlist.id, playlist.owner_id, playlist.name, playlist.description, playlist.thumbnail, playlist.is_public, playlist.is_category, playlist.created_at, playlist.updated_at FROM playlist JOIN user_playlist ON playlist.id = user_playlist.playlist_id WHERE user_id = $1`,
         [userId]
       );
 

@@ -3,6 +3,11 @@ const { query } = require("../config/db");
 const Playlist = require("../models/Playlist");
 const { authenticate } = require("../middleware/auth");
 const router = express.Router();
+const multer = require("multer");
+
+// Set up multer with memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // CREATE ENDPOINTS -------------------------------------------------
 // Create a new playlist
@@ -248,62 +253,87 @@ router.get("/:playlistId/games", async (req, res, next) => {
 // UPDATE ENDPOINTS -------------------------------------------------
 // Update a playlist
 // Update a playlist and optionally update the order of items in it
-router.put("/:playlistId", authenticate, async (req, res, next) => {
-  const playlistId = req.params.playlistId;
-  const ownerId = req?.user?.id;
+router.put(
+  "/:playlistId",
+  authenticate,
+  upload.single("thumbnail"),
+  async (req, res, next) => {
+    const playlistId = req.params.playlistId;
+    const ownerId = req?.user?.id;
 
-  if (!playlistId || !ownerId) {
-    return res.status(400).json({ error: "Invalid request" });
-  }
-
-  const playlist = await Playlist.findById(playlistId);
-
-  if (!playlist || playlist.owner_id !== ownerId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const {
-    name = playlist.name ?? "",
-    description = playlist.description ?? "",
-    isPublic = playlist.isPublic,
-    gamesOrder,
-  } = req.body; // Added gamesOrder to the destructured parameters
-
-  try {
-    // Handle non-order-related updates first
-    // if (!isPublic) {
-    //   await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
-    //     playlistId,
-    //   ]);
-    // }
-
-    const updatedPlaylist = await query(
-      `UPDATE playlist SET name = $1, description = $2, is_public = $3 WHERE id = $4 AND owner_id = $5 RETURNING *`,
-      [name, description, isPublic, playlistId, ownerId]
-    );
-
-    // Now, handle the order update if gamesOrder is provided
-    if (Array.isArray(gamesOrder) && gamesOrder.length > 0) {
-      // Begin a transaction to ensure atomicity
-      await query("BEGIN");
-
-      for (let i = 0; i < gamesOrder.length; i++) {
-        console.log("gamesOrder[i]::", gamesOrder[i]);
-        await query(
-          `UPDATE game_playlist SET item_order = $1 WHERE playlist_id = $2 AND game_id = $3`,
-          [i + 1, playlistId, gamesOrder[i]] // Set the order based on the array index + 1 for SQL indexing
-        );
-      }
-
-      await query("COMMIT"); // Commit the transaction if all updates succeed
+    if (!playlistId || !ownerId) {
+      return res.status(400).json({ error: "Invalid request" });
     }
 
-    res.status(200).json(updatedPlaylist.rows[0]);
-  } catch (error) {
-    await query("ROLLBACK"); // Roll back the transaction in case of error
-    next(error);
+    const playlist = await Playlist.findById(playlistId);
+
+    if (!playlist || playlist.owner_id !== ownerId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    console.log("data::req.body::", req.body);
+
+    const {
+      name = playlist.name ?? "",
+      description = playlist.description ?? "",
+      isPublic = playlist.isPublic,
+      gamesOrder,
+      thumbnail = playlist.thumbnail,
+    } = req.body; // Added gamesOrder to the destructured parameters
+
+    let base64;
+    let base64Str;
+    if (req.file) {
+      const fileBuffer = req.file.buffer;
+      base64 = fileBuffer.toString("base64");
+      // need to append data:image/<ending>;base64, where ending is the file type
+      const fileType = req.file.mimetype.split("/")[1];
+      base64Str = `data:image/${fileType};base64,${base64}`;
+    }
+
+    try {
+      // Handle non-order-related updates first
+      // if (!isPublic) {
+      //   await query(`DELETE FROM user_playlist WHERE playlist_id = $1`, [
+      //     playlistId,
+      //   ]);
+      // }
+
+      const updatedPlaylist = await query(
+        `UPDATE playlist SET name = $1, description = $2, is_public = $3, thumbnail = $4 WHERE id = $5 AND owner_id = $6 RETURNING *`,
+        [
+          name,
+          description,
+          isPublic,
+          base64Str ?? thumbnail,
+          playlistId,
+          ownerId,
+        ]
+      );
+
+      // Now, handle the order update if gamesOrder is provided
+      if (Array.isArray(gamesOrder) && gamesOrder.length > 0) {
+        // Begin a transaction to ensure atomicity
+        await query("BEGIN");
+
+        for (let i = 0; i < gamesOrder.length; i++) {
+          console.log("gamesOrder[i]::", gamesOrder[i]);
+          await query(
+            `UPDATE game_playlist SET item_order = $1 WHERE playlist_id = $2 AND game_id = $3`,
+            [i + 1, playlistId, gamesOrder[i]] // Set the order based on the array index + 1 for SQL indexing
+          );
+        }
+
+        await query("COMMIT"); // Commit the transaction if all updates succeed
+      }
+
+      res.status(200).json(updatedPlaylist.rows[0]);
+    } catch (error) {
+      await query("ROLLBACK"); // Roll back the transaction in case of error
+      next(error);
+    }
   }
-});
+);
 
 // DELETE ENDPOINTS -------------------------------------------------
 // Remove a game from a playlist (game_playlist)
