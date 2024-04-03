@@ -8,6 +8,11 @@ const File = require("../models/File");
 const { authenticate } = require("../middleware/auth");
 const { placeholder } = require("../middleware/placeholder");
 const router = express.Router();
+const multer = require("multer");
+
+// Set up multer with memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Create
 router.post("/create", authenticate, placeholder, async (req, res, next) => {
@@ -93,6 +98,8 @@ router.get("/:id", async (req, res, next) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Game not found" });
     }
+
+    console.log("result.rows[0]::", result.rows[0]);
     res.status(200).json(result.rows[0]);
   } catch (error) {
     next(error);
@@ -116,31 +123,52 @@ router.get("/user/:userId", async (req, res, next) => {
 });
 
 // Update
-router.put("/update/:id", authenticate, async (req, res, next) => {
-  const { id } = req.params;
-  const game = await Game.findById(id);
+router.put(
+  "/update/:id",
+  authenticate,
+  upload.single("thumbnail"),
+  async (req, res, next) => {
+    const { id } = req.params;
+    const game = await Game.findById(id);
 
-  if (!game) {
-    return res.status(404).json({ message: `Game with ID: ${id} not found` });
+    if (!game) {
+      return res.status(404).json({ message: `Game with ID: ${id} not found` });
+    }
+
+    const {
+      title = game.title,
+      description = game.description,
+      published = game.published,
+      thumbnail = game.thumbnail,
+    } = req.body;
+
+    const userId = req?.user?.id;
+
+    if (!userId || userId.toString() !== game.user_id.toString()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    let base64;
+    let base64Str;
+    if (req.file) {
+      const fileBuffer = req.file.buffer;
+      base64 = fileBuffer.toString("base64");
+      // need to append data:image/<ending>;base64, where ending is the file type
+      const fileType = req.file.mimetype.split("/")[1];
+      base64Str = `data:image/${fileType};base64,${base64}`;
+    }
+
+    try {
+      const result = await query(
+        "UPDATE games SET title = $1, description = $2, thumbnail = $3, published = $4 WHERE id = $5 RETURNING *",
+        [title, description, base64Str ?? thumbnail, published, id]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      next(error);
+    }
   }
-
-  const { title, description, published } = req.body;
-  const userId = req?.user?.id;
-
-  if (!userId || userId.toString() !== game.user_id.toString()) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  try {
-    const result = await query(
-      "UPDATE games SET title = $1, description = $2, published = $3 WHERE id = $4 RETURNING *",
-      [title, description, published, id]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    next(error);
-  }
-});
+);
 
 // Delete
 router.delete("/delete/:id", authenticate, async (req, res, next) => {

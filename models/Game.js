@@ -1,10 +1,20 @@
 const { query } = require("../config/db");
 
 class Game {
-  constructor(id, title, description, userId, published, createdAt, updatedAt) {
+  constructor(
+    id,
+    title,
+    description,
+    thumbnail,
+    userId,
+    published,
+    createdAt,
+    updatedAt
+  ) {
     this.id = id;
     this.title = title;
     this.description = description;
+    this.thumbnail = thumbnail;
     this.userId = userId;
     this.published = published;
     this.createdAt = createdAt;
