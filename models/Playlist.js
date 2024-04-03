@@ -47,13 +47,25 @@ class Playlist {
     }
   }
 
-  static async getSinglePlaylist(playlistId, next) {
+  static async getSinglePlaylist(playlistId, next, userId) {
     try {
-      const games = await query(
+      const playlist = await query(
         `SELECT playlist.id, playlist.owner_id, users.username AS ownername, playlist.name, playlist.description, playlist.is_public, playlist.is_category, playlist.created_at, playlist.updated_at FROM playlist JOIN users ON playlist.owner_id = users.id WHERE playlist.id = $1`,
         [playlistId]
       );
-      return games.rows[0];
+
+      const playlistData = playlist.rows[0];
+      if (userId) {
+        const userPlaylist = await query(
+          `SELECT * FROM user_playlist WHERE user_id = $1 AND playlist_id = $2`,
+          [userId, playlistId]
+        );
+        playlistData.isSaved = userPlaylist.rows.length > 0;
+      } else {
+        playlistData.isSaved = false;
+      }
+
+      return playlistData;
     } catch (error) {
       next(error);
     }
@@ -84,6 +96,15 @@ class Playlist {
             `SELECT username FROM users WHERE id = $1`,
             [playlist.owner_id]
           );
+          if (userId) {
+            const userPlaylist = await query(
+              `SELECT * FROM user_playlist WHERE user_id = $1 AND playlist_id = $2`,
+              [userId, playlist?.id]
+            );
+            playlist.isSaved = userPlaylist.rows.length > 0;
+          } else {
+            playlist.isSaved = false;
+          }
           playlist.username = owner.rows[0].username;
           return playlist;
         })

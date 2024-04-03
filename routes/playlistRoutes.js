@@ -130,7 +130,10 @@ router.post("/:playlistId/add", authenticate, async (req, res, next) => {
 
   const playlist = await Playlist.findById(playlistId);
 
-  if (playlist.owner_id?.toString() !== userId?.toString()) {
+  if (
+    playlist.owner_id?.toString() !== userId?.toString() &&
+    !playlist.is_public
+  ) {
     return res.status(401).json({ error: "Private Playlist: Unauthorized" });
   }
 
@@ -159,15 +162,16 @@ router.post("/:playlistId/add", authenticate, async (req, res, next) => {
 
 // READ ENDPOINTS -------------------------------------------------
 // Get a single playlist by its id
-router.get("/:playlistId", async (req, res, next) => {
+router.get("/:playlistId", authenticate, async (req, res, next) => {
   const playlistId = req.params.playlistId;
+  const user = req?.user;
 
   if (!playlistId) {
     return res.status(400).json({ error: "Invalid request" });
   }
 
   try {
-    const games = await Playlist.getSinglePlaylist(playlistId, next);
+    const games = await Playlist.getSinglePlaylist(playlistId, next, user?.id);
 
     res.status(200).json(games);
   } catch (error) {
