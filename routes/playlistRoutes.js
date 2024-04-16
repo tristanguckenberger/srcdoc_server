@@ -275,10 +275,10 @@ router.put(
 
     const {
       name = playlist.name ?? "",
-      description = playlist.description ?? "",
-      isPublic = playlist.isPublic,
+      description = playlist?.description ?? "",
+      isPublic = playlist?.isPublic ?? true,
       gamesOrder,
-      thumbnail = playlist.thumbnail,
+      thumbnail = playlist?.thumbnail,
     } = req.body; // Added gamesOrder to the destructured parameters
 
     let base64;
