@@ -31,6 +31,23 @@ class User {
     }
   }
 
+  static async findByResetToken(token) {
+    if (!token) {
+      return null;
+    }
+
+    const user = await query(
+      "SELECT * FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()",
+      [token]
+    );
+
+    if (user.rows.length === 0) {
+      return null;
+    }
+
+    return user.rows[0];
+  }
+
   async validatePassword(password) {
     if (!password) {
       return false;

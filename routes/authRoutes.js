@@ -4,10 +4,15 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
+const moment = require("moment-timezone");
 const { query } = require("../config/db");
 const { body, validationResult } = require("express-validator");
 const { authenticate } = require("../middleware/auth");
-const { sendVerificationEmail } = require("../utils/sendEmail");
+const {
+  sendVerificationEmail,
+  sendResetPasswordEmail,
+} = require("../utils/sendEmail");
+const User = require("../models/User");
 
 dotenv.config();
 
@@ -88,27 +93,83 @@ router.post("/verify", async (req, res, next) => {
   }
 });
 
-// Forgot Password endpoint
-router.post("/forgot", async (req, res, next) => {
-  const { forgotToken } = req.body;
-  try {
-    const user = await query(
-      "SELECT * FROM users WHERE verification_token = $1",
-      [verificationToken]
-    );
+// Password Reset endpoint
+router.put("/forgot-password", async (req, res, next) => {
+  const { email } = req.body;
+  const user = await User.findByEmail(email);
 
-    if (user.rows.length > 0) {
-      await query(
-        "UPDATE users SET is_active = true, verification_token = null WHERE id = $1",
-        [user.rows[0].id]
+  if (user) {
+    const token = crypto.randomBytes(20).toString("hex");
+    // 3600000
+    // const expiration = new Date(Date.now() + 30000).toISOString(); // 1 hour from now
+    const expiration = moment().tz("America/New_York").add(1, "hour").format();
+
+    console.log("token::", token);
+    console.log("expiration::", expiration);
+    console.log("user::", user);
+
+    try {
+      const userDidUpdate = await query(
+        "UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3",
+        [token, expiration, user.id]
       );
 
-      res.status(200).json({ message: "Email verified successfully!" });
-    } else {
-      res
-        .status(400)
-        .json({ message: "Invalid or expired verification token" });
+      console.log("userDidUpdate::", userDidUpdate);
+
+      sendResetPasswordEmail(email, token);
+      res.status(200).json({ message: "Check your email!" });
+    } catch (error) {
+      next(error);
     }
+  } else {
+    res.status(404).send("No user with that email found");
+  }
+});
+
+// Forgot Password endpoint, where user can update their password
+router.get("/forgot-password/:token", async (req, res, next) => {
+  const { token } = req.params;
+  try {
+    const user = await User.findByResetToken(token);
+
+    if (!user) {
+      return res
+        .status(400)
+        .send("Password reset token is invalid or has expired");
+    }
+
+    res.status(200).json({
+      action: `/reset-password/${token}`,
+      token,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Reset Password endpoint
+router.put("/reset-password/:token", async (req, res, next) => {
+  const { token } = req.params;
+
+  try {
+    const user = await User.findByResetToken(token);
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ error: "Password reset token is invalid or has expired" });
+    }
+
+    const newPassword = req.body.password;
+    // Ensure to hash the password before saving
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await query(
+      "UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2",
+      [hashedPassword, user.id]
+    );
+    res.status(200).json({ message: "Password has been reset successfully!" });
   } catch (error) {
     next(error);
   }
