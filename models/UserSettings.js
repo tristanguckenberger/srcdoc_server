@@ -1,12 +1,25 @@
 const { query } = require("../config/db");
 
 class UserSettings {
-  constructor(id, userId, createdDate, updatedDate, hidePopUpInfo, darkMode) {
+  constructor(
+    id,
+    userId,
+    createdDate,
+    updatedDate,
+    hidePopUpInfo,
+    hidePopUpInfoHome,
+    hidePopUpInfoGames,
+    hidePopUpInfoEditor,
+    darkMode
+  ) {
     this.id = id;
     this.userId = userId;
     this.createdDate = createdDate;
     this.updatedDate = updatedDate;
     this.hidePopUpInfo = hidePopUpInfo;
+    this.hidePopUpInfoHome = hidePopUpInfoHome;
+    this.hidePopUpInfoGames = hidePopUpInfoGames;
+    this.hidePopUpInfoEditor = hidePopUpInfoEditor;
     this.darkMode = darkMode;
   }
 

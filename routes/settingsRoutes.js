@@ -28,7 +28,13 @@ router.put("/update", authenticate, async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const { hide_pop_up_info, dark_mode } = req.body;
+  const {
+    hide_pop_up_info,
+    hide_pop_up_info_home,
+    hide_pop_up_info_games,
+    hide_pop_up_info_editor,
+    dark_mode,
+  } = req.body;
 
   const settings = await UserSettings.findByUserId(authenticatedUserId);
 
@@ -36,14 +42,17 @@ router.put("/update", authenticate, async (req, res, next) => {
     return res.status(404).json({ message: "User settings not found" });
   }
 
-  console.log("settings::", settings);
-  console.log("hide_pop_up_info::", hide_pop_up_info);
-  console.log("dark_mode::", dark_mode);
-
   try {
     const result = await query(
-      "UPDATE user_settings SET hide_pop_up_info = $1, dark_mode = $2 WHERE id = $3 RETURNING *",
-      [hide_pop_up_info, dark_mode, settings?.id]
+      "UPDATE user_settings SET hide_pop_up_info = $1, hide_pop_up_info_home = $2, hide_pop_up_info_games = $3, hide_pop_up_info_editor = $4, dark_mode = $5 WHERE id = $6 RETURNING *",
+      [
+        hide_pop_up_info,
+        hide_pop_up_info_home,
+        hide_pop_up_info_games,
+        hide_pop_up_info_editor,
+        dark_mode,
+        settings?.id,
+      ]
     );
     res.status(200).json(result.rows[0]);
   } catch (error) {
