@@ -99,7 +99,6 @@ router.get("/:id", async (req, res, next) => {
       return res.status(404).json({ message: "Game not found" });
     }
 
-    console.log("result.rows[0]::", result.rows[0]);
     res.status(200).json(result.rows[0]);
   } catch (error) {
     next(error);

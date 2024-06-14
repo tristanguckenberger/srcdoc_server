@@ -8,15 +8,18 @@ class Follows {
     this.timestamp = timestamp;
   }
 
-  //   static async findFollowsByFollowerId(id) {
-  //     try {
-  //       const follow = await query("SELECT * FROM follows WHERE id = $1", [id]);
-  //       return issue.rows[0];
-  //     } catch (error) {
-  //       console.error("Error fetching issue by id:", error);
-  //       return null;
-  //     }
-  //   }
+  static async findByFollowAndUserId(followingId, followerId) {
+    try {
+      const follow = await query(
+        "SELECT * FROM follows WHERE following_id = $1 AND follower_id = $2",
+        [followingId, followerId]
+      );
+      return follow.rows[0];
+    } catch (error) {
+      console.error("Error fetching follow by id:", error);
+      return null;
+    }
+  }
 }
 
-module.exports = Issue;
+module.exports = Follows;

@@ -5,23 +5,24 @@ const Follows = require("../models/Follows");
 
 const router = express.Router();
 
-router.post("/add", authenticate, async (req, res, next) => {
-  const userId = req?.user?.id;
+// User follows another user
+router.post("/follow/:followingId", authenticate, async (req, res, next) => {
+  const followerId = req?.user?.id;
 
-  if (!userId) {
+  if (!followerId) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const { followId } = req.body;
+  const { followingId } = req.params;
 
-  if (!followId) {
-    return res.status(401).json({ message: "Please provide a follow id" });
+  if (!followingId) {
+    return res.status(401).json({ message: "No follow id provided" });
   }
 
   try {
     const result = await query(
-      "INSERT INTO follows (user_id, follow_id) VALUES ($1, $2) RETURNING *",
-      [userId, followId]
+      "INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) RETURNING *",
+      [followerId, followingId]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -29,14 +30,46 @@ router.post("/add", authenticate, async (req, res, next) => {
   }
 });
 
+// User unfollows another user
+router.delete(
+  "/unfollow/:followingId",
+  authenticate,
+  async (req, res, next) => {
+    const { followingId } = req.params;
+    const followerId = req?.user?.id;
+
+    const follow = await Follows.findByFollowAndUserId(followingId, followerId);
+
+    if (!follow) {
+      return res.status(404).json({ message: "No connection found." });
+    }
+
+    if (
+      !followerId ||
+      followerId.toString() !== follow.follower_id.toString()
+    ) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      await query("DELETE FROM follows WHERE follow_id = $1", [
+        follow?.follow_id,
+      ]);
+      res.status(200).json({ message: "Follow deleted" });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // Get Followers
-router.get("/followers/:id", async (req, res, next) => {
-  const { id } = req.params;
+router.get("/followers/:userId", async (req, res, next) => {
+  const { userId } = req.params;
 
   try {
     const result = await query(
-      "SELECT users.id, users.username, users.email, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.user_id WHERE follows.follow_id = $1",
-      [id]
+      "SELECT users.id, users.username, users.email, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.follower_id WHERE follows.following_id = $1",
+      [userId]
     );
     res.status(200).json(result.rows);
   } catch (error) {
@@ -50,7 +83,7 @@ router.get("/following/:id", async (req, res, next) => {
 
   try {
     const result = await query(
-      "SELECT users.id, users.username, users.email, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.follow_id WHERE follows.user_id = $1",
+      "SELECT users.id, users.username, users.email, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.following_id WHERE follows.follower_id = $1",
       [id]
     );
     res.status(200).json(result.rows);
@@ -58,3 +91,5 @@ router.get("/following/:id", async (req, res, next) => {
     next(error);
   }
 });
+
+module.exports = router;
