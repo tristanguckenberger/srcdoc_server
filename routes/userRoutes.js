@@ -13,13 +13,11 @@ const upload = multer({ storage: storage });
 // Get Current User
 router.get("/me", authenticate, async (req, res, next) => {
   const id = req?.user?.id;
-  console.log("id", id);
-  // try {
-  const result = await query("SELECT * FROM users WHERE id = $1", [id]);
+  const result = await query(
+    "SELECT users.id, users.username, users.email, users.profile_photo, users.bio, users.is_active FROM users WHERE id = $1",
+    [id]
+  );
   res.status(200).json(result.rows[0]);
-  // } catch (error) {
-  //   next(error);
-  // }
 });
 
 // Get All Users

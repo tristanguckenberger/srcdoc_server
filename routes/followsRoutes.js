@@ -19,6 +19,19 @@ router.post("/follow/:followingId", authenticate, async (req, res, next) => {
     return res.status(401).json({ message: "No follow id provided" });
   }
 
+  // Check if user is trying to follow themselves
+  if (followerId?.toString() === followingId?.toString()) {
+    return res.status(400).json({ message: "You cannot follow yourself" });
+  }
+
+  // Check if user is already following the user
+  const follow = await Follows.findByFollowAndUserId(followingId, followerId);
+  if (follow) {
+    return res
+      .status(400)
+      .json({ message: "You are already following this user" });
+  }
+
   try {
     const result = await query(
       "INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) RETURNING *",
@@ -68,7 +81,7 @@ router.get("/followers/:userId", async (req, res, next) => {
 
   try {
     const result = await query(
-      "SELECT users.id, users.username, users.email, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.follower_id WHERE follows.following_id = $1",
+      "SELECT users.id, users.username, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.follower_id WHERE follows.following_id = $1",
       [userId]
     );
     res.status(200).json(result.rows);
@@ -83,7 +96,7 @@ router.get("/following/:id", async (req, res, next) => {
 
   try {
     const result = await query(
-      "SELECT users.id, users.username, users.email, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.following_id WHERE follows.follower_id = $1",
+      "SELECT users.id, users.username, users.profile_photo, users.bio FROM users JOIN follows ON users.id = follows.following_id WHERE follows.follower_id = $1",
       [id]
     );
     res.status(200).json(result.rows);

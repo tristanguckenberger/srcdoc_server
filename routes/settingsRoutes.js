@@ -15,8 +15,6 @@ router.get("/me", authenticate, async (req, res, next) => {
 
   const settings = await UserSettings.findByUserId(userId);
 
-  console.log("settings::", settings);
-
   res.status(200).json(settings);
 });
 
