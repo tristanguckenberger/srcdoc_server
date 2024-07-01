@@ -52,17 +52,10 @@ router.put(
   authenticate,
   upload.single("profilePhoto"),
   async (req, res, next) => {
-    console.log("req.body", req.body);
-    console.log("req.file", req.file);
-    console.log("req.params", req.params);
-    console.log("req.user", req.user);
     const { id } = req.params;
     const userId = req?.user?.id;
 
     if (!userId || userId.toString() !== id.toString()) {
-      console.log("!userId || userId.toString() !== id.toString()");
-      console.log("userId", userId.toString());
-      console.log("id", id.toString());
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -125,20 +118,12 @@ router.put(
     let counter = 1;
 
     validUpdates.forEach((field, index) => {
-      console.log("=======================");
-      console.log("validUpdates::field::", field);
       let dbField =
         field === "profilePhoto"
           ? "profile_photo"
           : field === "isActive"
           ? "is_active"
           : field;
-
-      if (field === "profilePhoto" || field === "profile_photo") {
-        console.log('field === "profilePhoto" || field === "profile_photo"');
-        console.log("field::", field);
-        console.log("validUpdates::base64::", base64Str);
-      }
 
       if (
         (field === "profile_photo" || field === "profilePhoto") &&
@@ -159,9 +144,6 @@ router.put(
 
     queryStr += ` WHERE id = $${counter}`;
     queryValues.push(id);
-
-    console.log("queryStr:::::::::::::::::", queryStr);
-    console.log("queryValues:::::::::::::::::", queryValues);
 
     try {
       await query(queryStr, queryValues);

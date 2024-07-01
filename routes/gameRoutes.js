@@ -410,8 +410,6 @@ router.put("/:gameId/files/:fileId", authenticate, async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  console.log("fileId::", fileId);
-
   const file = await File.findById(fileId);
 
   if (!file) {

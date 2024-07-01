@@ -104,17 +104,11 @@ router.put("/forgot-password", async (req, res, next) => {
     // const expiration = new Date(Date.now() + 30000).toISOString(); // 1 hour from now
     const expiration = moment().tz("America/New_York").add(1, "hour").format();
 
-    console.log("token::", token);
-    console.log("expiration::", expiration);
-    console.log("user::", user);
-
     try {
       const userDidUpdate = await query(
         "UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3",
         [token, expiration, user.id]
       );
-
-      console.log("userDidUpdate::", userDidUpdate);
 
       sendResetPasswordEmail(email, token);
       res.status(200).json({ message: "Check your email!" });
@@ -177,9 +171,8 @@ router.put("/reset-password/:token", async (req, res, next) => {
 
 // Local Login Route
 router.post("/login", passport.authenticate("local"), (req, res) => {
-  console.log("hit login route", req.body);
   const token = makeToken(req.user);
-  console.log("req.session::", req.session);
+
   res.cookie("server_token", token, {
     maxAge: 900000,
     httpOnly: false,

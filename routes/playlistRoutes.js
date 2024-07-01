@@ -188,16 +188,12 @@ router.get("/:playlistId", async (req, res, next) => {
 router.get("/user/:userId", async (req, res, next) => {
   const userId = req.params.userId;
 
-  console.log("userId::", userId);
-
   if (!userId) {
     return res.status(400).json({ error: "Invalid request" });
   }
 
   try {
     const playlists = await Playlist.getAllPlaylistsForSingleUser(userId, next);
-
-    console.log("playlists::", playlists);
 
     res.status(200).json(playlists);
   } catch (error) {
@@ -215,7 +211,6 @@ router.get("/get/library", authenticate, async (req, res, next) => {
 
   try {
     const playlists = await Playlist.getAllPlaylistsInLibrary(userId, next);
-    console.log("playlists::", playlists);
     res.status(200).json(playlists);
   } catch (error) {
     next(error);
@@ -271,8 +266,6 @@ router.put(
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    console.log("data::req.body::", req.body);
-
     const {
       name = playlist.name ?? "",
       description = playlist?.description ?? "",
@@ -317,7 +310,6 @@ router.put(
         await query("BEGIN");
 
         for (let i = 0; i < gamesOrder.length; i++) {
-          console.log("gamesOrder[i]::", gamesOrder[i]);
           await query(
             `UPDATE game_playlist SET item_order = $1 WHERE playlist_id = $2 AND game_id = $3`,
             [i + 1, playlistId, gamesOrder[i]] // Set the order based on the array index + 1 for SQL indexing
