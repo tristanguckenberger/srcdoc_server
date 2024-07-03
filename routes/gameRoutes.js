@@ -6,9 +6,24 @@ const Leaderboards = require("../models/Leaderboards");
 const Tag = require("../models/Tag");
 const File = require("../models/File");
 const { authenticate } = require("../middleware/auth");
+const { logActivity } = require("../middleware/activity");
+const { publishGameCheck } = require("../middleware/publish");
 const { placeholder } = require("../middleware/placeholder");
 const router = express.Router();
 const multer = require("multer");
+
+const getGameActivityData = async (req, res) => {
+  const { id } = req.params;
+  const userId = req?.user?.id;
+
+  return {
+    user_id: userId,
+    target_id: id,
+    primary_text: "published a game",
+    activity_type: "passive",
+    target_type: "game",
+  };
+};
 
 // Set up multer with memory storage
 const storage = multer.memoryStorage();
@@ -126,20 +141,27 @@ router.put(
   "/update/:id",
   authenticate,
   upload.single("thumbnail"),
+  // call publishGameCheck
+  publishGameCheck,
   async (req, res, next) => {
     const { id } = req.params;
     const game = await Game.findById(id);
+    const canPublish = req?.canPublish;
 
     if (!game) {
       return res.status(404).json({ message: `Game with ID: ${id} not found` });
     }
 
-    const {
+    let {
       title = game.title,
       description = game.description,
       published = game.published,
       thumbnail = game.thumbnail,
     } = req.body;
+
+    if (!canPublish) {
+      published = false;
+    }
 
     const userId = req?.user?.id;
 
@@ -158,11 +180,13 @@ router.put(
     }
 
     try {
-      const result = await query(
-        "UPDATE games SET title = $1, description = $2, thumbnail = $3, published = $4 WHERE id = $5 RETURNING *",
-        [title, description, base64Str ?? thumbnail, published, id]
-      );
-      res.status(201).json(result.rows[0]);
+      await logActivity(getGameActivityData)(req, res, async () => {
+        const result = await query(
+          "UPDATE games SET title = $1, description = $2, thumbnail = $3, published = $4 WHERE id = $5 RETURNING *",
+          [title, description, base64Str ?? thumbnail, published, id]
+        );
+        res.status(201).json(result.rows[0]);
+      });
     } catch (error) {
       next(error);
     }

@@ -2,7 +2,29 @@ const express = require("express");
 const { query } = require("../config/db");
 const router = express.Router();
 const { authenticate } = require("../middleware/auth");
+const { logActivity } = require("../middleware/activity");
 const Comment = require("../models/Comment");
+
+const getCommentActivityData = async (req, res) => {
+  const userId = req?.user?.id;
+  const { gameId, commentText } = req.body;
+
+  // Assume the result contains the comment ID after insertion
+  const result = await query(
+    "INSERT INTO comments (user_id, game_id, parent_comment_id, comment_text) VALUES ($1, $2, $3, $4) RETURNING *",
+    [userId, gameId, req.body.parentCommentId, commentText]
+  );
+
+  const commentId = result.rows[0].id;
+
+  return {
+    user_id: userId,
+    target_id: commentId,
+    primary_text: commentText,
+    activity_type: "passive",
+    target_type: "comment",
+  };
+};
 
 // Add comment to Comments table
 router.post("/create", authenticate, async (req, res, next) => {
@@ -19,11 +41,13 @@ router.post("/create", authenticate, async (req, res, next) => {
   }
 
   try {
-    const result = await query(
-      "INSERT INTO comments (user_id, game_id, parent_comment_id, comment_text) VALUES ($1, $2, $3, $4) RETURNING *",
-      [userId, gameId, parentCommentId, commentText]
-    );
-    res.status(201).json(result.rows[0]);
+    await logActivity(getCommentActivityData)(req, res, async () => {
+      const result = await query(
+        "INSERT INTO comments (user_id, game_id, parent_comment_id, comment_text) VALUES ($1, $2, $3, $4) RETURNING *",
+        [userId, gameId, parentCommentId, commentText]
+      );
+      res.status(201).json(result.rows[0]);
+    });
   } catch (error) {
     next(error);
   }

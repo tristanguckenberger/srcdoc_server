@@ -3,7 +3,28 @@ const { query } = require("../config/db");
 const Game = require("../models/Game");
 const GameSession = require("../models/GameSession");
 const { authenticate } = require("../middleware/auth");
+const { logActivity } = require("../middleware/activity");
 const router = express.Router();
+
+const getGameSessionActivityData = async (req, res) => {
+  const userId = req?.user?.id;
+  const { gameSessionId } = req.params;
+
+  const gameSession = await GameSession.findByGameSessionId(gameSessionId);
+  if (!gameSession) {
+    return res.status(404).json({ message: "Game session not found" });
+  }
+
+  const game_id = gameSession.game_id;
+
+  return {
+    user_id: userId,
+    target_id: game_id,
+    primary_text: "played a game",
+    activity_type: "passive",
+    target_type: "game_session",
+  };
+};
 
 // Game Sessions -----------------------------------------------------------
 
@@ -32,6 +53,7 @@ router.post("/games/:gameId/create", authenticate, async (req, res, next) => {
       "INSERT INTO game_session (game_id, user_id) VALUES ($1, $2) RETURNING *",
       [gameId, userId]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     next(error);
@@ -190,11 +212,13 @@ router.put("/:gameSessionId", authenticate, async (req, res, next) => {
   }
 
   try {
-    const result = await query(
-      "UPDATE game_session SET session_total_time = $1, session_total_score = $2 WHERE game_session_id = $3 RETURNING *",
-      [sessionTotalTime, sessionTotalScore, gameSessionId]
-    );
-    res.status(201).json(result.rows[0]);
+    await logActivity(getGameSessionActivityData)(req, res, async () => {
+      const result = await query(
+        "UPDATE game_session SET session_total_time = $1, session_total_score = $2 WHERE game_session_id = $3 RETURNING *",
+        [sessionTotalTime, sessionTotalScore, gameSessionId]
+      );
+      res.status(201).json(result.rows[0]);
+    });
   } catch (error) {
     next(error);
   }
