@@ -4,6 +4,7 @@ const router = express.Router();
 const { authenticate } = require("../middleware/auth");
 const Review = require("../models/Review");
 const Tag = require("../models/Tag");
+const User = require("../models/User");
 
 // Add review to Reviews table
 router.post("/create/:id", authenticate, async (req, res, next) => {
@@ -148,7 +149,10 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
 
     // Get review by ID
-    const result = await query("SELECT * FROM reviews WHERE id = $1", [id]);
+    const result = await query(
+      "SELECT reviews.*, users.username, users.profile_photo FROM reviews JOIN users ON reviews.user_id = users.id WHERE reviews.id = $1",
+      [id]
+    );
 
     // Get all tags for the review by ID
     const tags = await query(
@@ -172,9 +176,10 @@ router.get("/:id", async (req, res) => {
 router.get("/games/:gameId", async (req, res) => {
   try {
     const { gameId } = req.params;
-    const result = await query("SELECT * FROM reviews WHERE game_id = $1", [
-      gameId,
-    ]);
+    const result = await query(
+      "SELECT reviews.*, users.username, users.profile_photo FROM reviews JOIN users ON reviews.user_id = users.id WHERE game_id = $1",
+      [gameId]
+    );
 
     const taggedReviews = await Promise.all(
       result.rows.map(async (review) => {
