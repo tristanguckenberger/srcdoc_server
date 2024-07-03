@@ -176,16 +176,6 @@ router.get("/games/:gameId", async (req, res) => {
       gameId,
     ]);
 
-    // For each review, get all tags
-    // for (const review of result.rows) {
-    //   const tags = await query(
-    //     "SELECT tags.name FROM tags JOIN review_tags ON tags.id = review_tags.tag_id WHERE review_tags.review_id = $1",
-    //     [review.id]
-    //   );
-    //   review.tags = [...tags.rows];
-    // }
-
-    console.log(`/api/reviews/games/${gameId}::result`, result.rows);
     const taggedReviews = await Promise.all(
       result.rows.map(async (review) => {
         const tags = await query(
@@ -193,13 +183,9 @@ router.get("/games/:gameId", async (req, res) => {
           [review.id]
         );
 
-        console.log(`/api/reviews/games/${gameId}::tags`, tags.rows);
-
         return { ...review, tags: [...tags.rows] };
       })
     );
-
-    console.log(`/api/reviews/games/${gameId}::taggedReviews`, taggedReviews);
 
     res.status(200).json(taggedReviews);
   } catch (error) {
