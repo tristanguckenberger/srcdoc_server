@@ -52,7 +52,7 @@ router.delete("/delete/:id", authenticate, async (req, res, next) => {
   }
 });
 
-// Get all favorite games for a user
+// Get my favorites (published and unpublished games)
 router.get("/user", authenticate, async (req, res, next) => {
   const userId = req?.user?.id;
 
@@ -66,6 +66,26 @@ router.get("/user", authenticate, async (req, res, next) => {
     // Join the 'favorites' table with the 'games' table
     const result = await query(
       "SELECT g.* FROM games g INNER JOIN favorites f ON g.id = f.game_id WHERE f.user_id = $1 ORDER BY g.id DESC",
+      [userId]
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all favorites (published games only) for a user
+router.get("/single/user/:id", async (req, res, next) => {
+  const userId = req?.params?.id;
+
+  if (!userId) {
+    return res.status(400).json({ message: "Please pass a user id" });
+  }
+
+  try {
+    // Join the 'favorites' table with the 'games' table
+    const result = await query(
+      "SELECT g.* FROM games g INNER JOIN favorites f ON g.id = f.game_id WHERE g.published = true AND f.user_id = $1 ORDER BY g.id DESC",
       [userId]
     );
     res.status(200).json(result.rows);
