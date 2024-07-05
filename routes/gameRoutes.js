@@ -84,7 +84,7 @@ router.get("/all", async (req, res, next) => {
     // Limit the number of results to the specified limit
     const queryText = `
       SELECT * FROM games
-      WHERE id > $1
+      WHERE id > $1 AND games.published = true
       ORDER BY id ASC
       LIMIT $2
     `;
