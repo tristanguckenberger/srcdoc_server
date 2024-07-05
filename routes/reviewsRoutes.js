@@ -4,12 +4,11 @@ const router = express.Router();
 const { authenticate } = require("../middleware/auth");
 const Review = require("../models/Review");
 const Tag = require("../models/Tag");
-const User = require("../models/User");
 
 // Add review to Reviews table
 router.post("/create/:id", authenticate, async (req, res, next) => {
-  const userId = req?.user?.id;
-  const gameId = req?.params?.id;
+  const userId = parseInt(req?.user?.id);
+  const gameId = parseInt(req?.params?.id);
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -19,15 +18,10 @@ router.post("/create/:id", authenticate, async (req, res, next) => {
     return res.status(401).json({ message: "Please provide a game id" });
   }
 
-  /**
-   * title can be null or a string
-   * body can be null or a string
-   * rating must be one of 0, 1, 2, 3, 4, or 5
-   * difficulty must be one of 0, 1, 2, 3, 4, or 5
-   * recommended must be true or false
-   * tags can be null or an array of strings
-   */
-  const { title, body, rating, difficulty, recommended, tags } = req.body;
+  const { title, body, tags } = req.body;
+  const rating = parseInt(req?.body?.rating);
+  const difficulty = parseInt(req?.body?.difficulty);
+  const recommended = JSON.parse(req?.body?.recommended);
 
   if (title && typeof title !== "string") {
     return res.status(400).json({ message: "Title must be a string" });
@@ -58,7 +52,6 @@ router.post("/create/:id", authenticate, async (req, res, next) => {
   try {
     // check if user has already reviewed the game
     const existingReview = await Review.findByUserAndGame(userId, gameId);
-
     if (existingReview) {
       return res
         .status(400)
@@ -89,8 +82,8 @@ router.post("/create/:id", authenticate, async (req, res, next) => {
           let findTag = await Tag.findByName(tag);
           if (!findTag) {
             const insertTagResult = await query(
-              "INSERT INTO tags (review_id, tag) VALUES ($1, $2) RETURNING *",
-              [result.rows[0].id, tag]
+              "INSERT INTO tags (name) VALUES ($1) RETURNING *",
+              [tag]
             );
 
             findTag = insertTagResult?.rows[0];
