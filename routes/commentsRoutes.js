@@ -56,7 +56,9 @@ router.post("/create", authenticate, async (req, res, next) => {
 // Get all comments
 router.get("/all", async (req, res) => {
   try {
-    const result = await query("SELECT * FROM comments");
+    const result = await query(
+      "SELECT comments.*, users.profile_photo, users.username FROM comments JOIN users ON comments.user_id = users.id"
+    );
     res.status(200).json(result.rows);
   } catch (error) {
     next(error);
@@ -67,7 +69,10 @@ router.get("/all", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await query("SELECT * FROM comments WHERE id = $1", [id]);
+    const result = await query(
+      "SELECT comments.*, users.profile_photo, users.username FROM comments JOIN users ON comments.user_id = users.id WHERE id = $1",
+      [id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Comment not found" });
     }
@@ -81,9 +86,10 @@ router.get("/:id", async (req, res) => {
 router.get("/game/:gameId", async (req, res) => {
   try {
     const { gameId } = req.params;
-    const result = await query("SELECT * FROM comments WHERE game_id = $1", [
-      gameId,
-    ]);
+    const result = await query(
+      "SELECT comments.*, users.profile_photo, users.username FROM comments JOIN users ON comments.user_id = users.id WHERE game_id = $1",
+      [gameId]
+    );
     res.status(200).json(result.rows);
   } catch (error) {
     next(error);
@@ -94,9 +100,10 @@ router.get("/game/:gameId", async (req, res) => {
 router.get("/user/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const result = await query("SELECT * FROM comments WHERE user_id = $1", [
-      userId,
-    ]);
+    const result = await query(
+      "SELECT comments.*, users.profile_photo, users.username FROM comments JOIN users ON comments.user_id = users.id WHERE comments.user_id = $1",
+      [userId]
+    );
     res.status(200).json(result.rows);
   } catch (error) {
     next(error);
@@ -177,7 +184,7 @@ router.get("/replies/:commentId", async (req, res) => {
   try {
     const { commentId } = req.params;
     const result = await query(
-      "SELECT * FROM comments WHERE parent_comment_id = $1",
+      "SELECT comments.*, users.profile_photo, users.username FROM comments JOIN users ON comments.user_id = users.id WHERE parent_comment_id = $1",
       [commentId]
     );
     res.status(200).json(result.rows);
