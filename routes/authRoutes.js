@@ -62,7 +62,13 @@ router.post(
       // Send verification email
       sendVerificationEmail(user.rows[0].email, verificationToken);
 
-      res.json({ token });
+      const settings = await Settings.findByUserId(user.rows[0].id);
+
+      res.json({
+        token,
+        user: { ...user.rows[0] },
+        settings,
+      });
     } catch (error) {
       next(error);
     }
