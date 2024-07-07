@@ -1,6 +1,8 @@
 const express = require("express");
 const { query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
+const { sendNotification } = require("../utils/sendNotification");
+const User = require("../models/User");
 const Follows = require("../models/Follows");
 
 const router = express.Router();
@@ -8,6 +10,7 @@ const router = express.Router();
 // User follows another user
 router.post("/follow/:followingId", authenticate, async (req, res, next) => {
   const followerId = req?.user?.id;
+  const username = req?.user?.username;
 
   if (!followerId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -37,6 +40,17 @@ router.post("/follow/:followingId", authenticate, async (req, res, next) => {
       "INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) RETURNING *",
       [followerId, followingId]
     );
+
+    const notification = {
+      recipient_id: parseInt(followingId),
+      sender_id: parseInt(followerId),
+      type: "follow",
+      entity_id: parseInt(followerId),
+      entity_type: "user",
+      message: `${username} followed you`,
+    };
+    await sendNotification(notification);
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     next(error);

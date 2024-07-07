@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const crypto = require("crypto");
 const moment = require("moment-timezone");
+const { getUserSockets } = require("../ws-server");
 const { query } = require("../config/db");
 const { body, validationResult } = require("express-validator");
 const { authenticate } = require("../middleware/auth");
@@ -178,6 +179,19 @@ router.post("/login", passport.authenticate("local"), (req, res) => {
     httpOnly: false,
     path: "/server",
   });
+
+  try {
+    const userSockets = getUserSockets();
+    const client = userSockets.get(req.user.id);
+    if (client) {
+      client.send(JSON.stringify({ type: "login", userId: req.user.id }));
+    } else {
+      userSockets.set(req.user.id, req.client);
+    }
+  } catch (error) {
+    console.log("error::", error);
+  }
+
   res.send({ token });
   // res.json({ token });
 });
@@ -189,6 +203,19 @@ router.post("/logout", authenticate, (req, res) => {
     req.logout(function (err) {
       if (err) {
         return next(err);
+      }
+
+      console.log("req.user::", req.user);
+
+      try {
+        const userSockets = getUserSockets();
+        const client = userSockets?.get(req?.user?.id);
+        if (client) {
+          client.close();
+          userSockets?.delete(req?.user?.id);
+        }
+      } catch (error) {
+        console.log("error::", error);
       }
 
       // Continue only if logout was successful

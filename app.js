@@ -5,6 +5,8 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
+const { initWebSocket } = require("./ws-server.js");
+const http = require("http");
 const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -23,12 +25,15 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const followsRoutes = require("./routes/followsRoutes");
 const feedRoutes = require("./routes/feedRoutes");
 const usersActivitiesRoutes = require("./routes/usersActivitiesRoutes");
+const notificationsRoutes = require("./routes/notificationsRoutes");
 
 const errorHandler = require("./middleware/errorHandler");
 const winston = require("winston");
 const logger = require("./middleware/logger.js");
 
 const app = express();
+const server = http.createServer(app);
+
 app.use(express.json());
 
 // Security headers
@@ -78,6 +83,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/follows", followsRoutes);
 app.use("/api/feed", feedRoutes);
 app.use("/api/userActivities", usersActivitiesRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // app.use("/api/gamesPlaylist", gamesPlaylistRoutes);
 
@@ -99,6 +105,22 @@ if (process.env.NODE_ENV !== "production") {
 
 // Server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
+
+initWebSocket(server);
+
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+
+  // Get the address and port from the HTTP server
+  const address = server.address();
+  console.log("address::", address);
+  const serverAddress =
+    typeof address === "string"
+      ? address
+      : `${address.address}:${address.port}`;
+
+  console.log(`WebSocket server is running at ws://${serverAddress}`);
 });

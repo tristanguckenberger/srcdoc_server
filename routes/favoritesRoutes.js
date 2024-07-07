@@ -1,12 +1,15 @@
 const express = require("express");
 const { query } = require("../config/db");
 const { authenticate } = require("../middleware/auth");
+const { sendNotification } = require("../utils/sendNotification");
 const Favorite = require("../models/Favorite");
+const Game = require("../models/Game");
 
 const router = express.Router();
 
 router.post("/add", authenticate, async (req, res, next) => {
   const userId = req?.user?.id;
+  const username = req?.user?.username;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -18,11 +21,24 @@ router.post("/add", authenticate, async (req, res, next) => {
     return res.status(401).json({ message: "Please provide a game id" });
   }
 
+  const game = await Game.findById(gameId);
+
   try {
     const result = await query(
       "INSERT INTO favorites (user_id, game_id) VALUES ($1, $2) RETURNING *",
       [userId, gameId]
     );
+
+    const notification = {
+      recipient_id: game.user_id,
+      sender_id: userId,
+      type: "favorite",
+      entity_id: gameId,
+      entity_type: "game",
+      message: `${username} liked your game ${gameId}`,
+    };
+    await sendNotification(notification);
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     next(error);

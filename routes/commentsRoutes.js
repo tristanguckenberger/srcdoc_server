@@ -3,7 +3,9 @@ const { query } = require("../config/db");
 const router = express.Router();
 const { authenticate } = require("../middleware/auth");
 const { logActivity } = require("../middleware/activity");
+const { sendNotification } = require("../utils/sendNotification");
 const Comment = require("../models/Comment");
+const Game = require("../models/Game");
 
 const getCommentActivityData = async (req, res) => {
   const userId = req?.user?.id;
@@ -17,18 +19,23 @@ const getCommentActivityData = async (req, res) => {
 
   const commentId = result.rows[0].id;
 
-  return {
+  const commentData = {
     user_id: userId,
     target_id: commentId,
     primary_text: commentText,
     activity_type: "passive",
     target_type: "comment",
   };
+
+  req.comment = commentData;
+
+  return commentData;
 };
 
 // Add comment to Comments table
 router.post("/create", authenticate, async (req, res, next) => {
   const userId = req?.user?.id;
+  const username = req?.user?.username;
 
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -40,13 +47,27 @@ router.post("/create", authenticate, async (req, res, next) => {
     return res.status(401).json({ message: "Please provide a game id" });
   }
 
+  const game = await Game.findById(gameId);
+
   try {
     await logActivity(getCommentActivityData)(req, res, async () => {
-      const result = await query(
-        "INSERT INTO comments (user_id, game_id, parent_comment_id, comment_text) VALUES ($1, $2, $3, $4) RETURNING *",
-        [userId, gameId, parentCommentId, commentText]
-      );
-      res.status(201).json(result.rows[0]);
+      const commentId = req?.comment?.target_id;
+      const result = await Comment.findById(commentId);
+      console.log("result::", result);
+      const notification = {
+        recipient_id: parseInt(game?.user_id),
+        sender_id: parseInt(userId),
+        type: "comment",
+        entity_id: game?.id,
+        entity_type: "comment",
+        message: `${username} commented on your game`,
+      };
+
+      console.log("notification::before::", notification);
+
+      await sendNotification(notification);
+
+      res.status(201).json(result);
     });
   } catch (error) {
     next(error);
