@@ -6,52 +6,113 @@ const router = express.Router();
 
 // Get all notifications from a user
 router.get("/users/:userId", authenticate, async (req, res, next) => {
-  try {
-    const { userId } = req.params;
-    const result = await query(
+  const { userId } = req.params;
+  const limit = parseInt(req.query.limit, 10) || 50; // Default limit to 50 notifications
+  const offset = parseInt(req.query.offset, 10) || 0;
+
+  const fetchNotifications = async (userId, limit, offset) => {
+    return await query(
       `SELECT 
         notifications.*, 
         sender.username AS sender_username, 
-        sender.profile_photo AS sender_profile_photo,
-            CASE 
-                WHEN notifications.entity_type = 'game' THEN games.title 
-                WHEN notifications.entity_type = 'comment' THEN comment_games.title 
-                WHEN notifications.entity_type = 'review' THEN reviews.title 
-                WHEN notifications.entity_type = 'follow' THEN NULL 
-                ELSE NULL 
-            END AS entity_title,
-            CASE 
-                WHEN notifications.entity_type = 'game' THEN games.thumbnail 
-                WHEN notifications.entity_type = 'comment' THEN comment_games.thumbnail 
-                WHEN notifications.entity_type = 'review' THEN reviews.body 
-                WHEN notifications.entity_type = 'follow' THEN NULL 
-                ELSE NULL 
-            END AS entity_thumbnail,
-            CASE 
-                WHEN notifications.entity_type = 'game' THEN games.description 
-                WHEN notifications.entity_type = 'comment' THEN comment_games.description 
-                WHEN notifications.entity_type = 'review' THEN reviews.body
-                WHEN notifications.entity_type = 'follow' THEN NULL 
-                ELSE NULL 
-            END AS entity_description,
-            CASE 
-                WHEN notifications.entity_type = 'game' THEN NULL
-                WHEN notifications.entity_type = 'comment' THEN comments.comment_text 
-                WHEN notifications.entity_type = 'review' THEN reviews.body
-                WHEN notifications.entity_type = 'follow' THEN NULL 
-                ELSE NULL 
-            END AS entity_primary_text
-        FROM notifications
-        JOIN users AS sender ON notifications.sender_id = sender.id
-        LEFT JOIN games ON notifications.entity_type = 'game' AND notifications.entity_id = games.id
-        LEFT JOIN comments ON notifications.entity_type = 'comment' AND notifications.entity_id = comments.id
-        LEFT JOIN games AS comment_games ON comments.game_id = comment_games.id
-        LEFT JOIN reviews ON notifications.entity_type = 'review' AND notifications.entity_id = reviews.id
-        WHERE notifications.recipient_id = $1
-        ORDER BY notifications.created_at DESC;`,
+        sender.profile_photo AS sender_profile_photo
+      FROM notifications
+      JOIN users AS sender ON notifications.sender_id = sender.id
+      WHERE notifications.recipient_id = $1
+      ORDER BY notifications.created_at DESC
+      LIMIT $2 OFFSET $3`,
+      [userId, limit, offset]
+    );
+  };
+
+  const fetchAssociatedData = async (notifications) => {
+    const gameIds = notifications
+      .filter((n) => n.entity_type === "game")
+      .map((n) => n.entity_id);
+    const commentIds = notifications
+      .filter((n) => n.entity_type === "comment")
+      .map((n) => n.entity_id);
+    const reviewIds = notifications
+      .filter((n) => n.entity_type === "review")
+      .map((n) => n.entity_id);
+
+    const games = await query(`SELECT * FROM games WHERE id = ANY($1::int[])`, [
+      gameIds,
+    ]);
+    const comments = await query(
+      `SELECT * FROM comments WHERE id = ANY($1::int[])`,
+      [commentIds]
+    );
+    const reviews = await query(
+      `SELECT * FROM reviews WHERE id = ANY($1::int[])`,
+      [reviewIds]
+    );
+    const commentGames = await query(
+      `SELECT * FROM games WHERE id = ANY(SELECT game_id FROM comments WHERE id = ANY($1::int[]))`,
+      [commentIds]
+    );
+
+    return {
+      games: games.rows,
+      comments: comments.rows,
+      reviews: reviews.rows,
+      commentGames: commentGames.rows,
+    };
+  };
+
+  try {
+    // Fetch total notifications count
+    const totalNotificationsResult = await query(
+      `SELECT COUNT(*) AS total FROM notifications WHERE recipient_id = $1`,
       [userId]
     );
-    res.status(200).json(result.rows);
+    const totalNotifications = totalNotificationsResult.rows[0].total;
+
+    // Fetch paginated notifications
+    const notificationsResult = await fetchNotifications(userId, limit, offset);
+    const notifications = notificationsResult.rows;
+
+    // Fetch associated data
+    const associatedData = await fetchAssociatedData(notifications);
+
+    // Combine data
+    const combinedNotifications = notifications.map((notification) => {
+      const associatedGame = associatedData.games.find(
+        (g) => g.id === notification.entity_id
+      );
+      const associatedComment = associatedData.comments.find(
+        (c) => c.id === notification.entity_id
+      );
+      const associatedReview = associatedData.reviews.find(
+        (r) => r.id === notification.entity_id
+      );
+      const associatedCommentGame = associatedData.commentGames.find(
+        (g) => g.id === associatedComment?.game_id
+      );
+
+      return {
+        ...notification,
+        entity_title:
+          associatedGame?.title ||
+          associatedCommentGame?.title ||
+          associatedReview?.title ||
+          null,
+        entity_thumbnail:
+          associatedGame?.thumbnail || associatedCommentGame?.thumbnail || null,
+        entity_description:
+          associatedGame?.description ||
+          associatedCommentGame?.description ||
+          associatedReview?.body ||
+          null,
+        entity_primary_text:
+          associatedComment?.comment_text || associatedReview?.body || null,
+      };
+    });
+
+    res.status(200).json({
+      notifications: combinedNotifications,
+      total: totalNotifications,
+    });
   } catch (error) {
     next(error);
   }
