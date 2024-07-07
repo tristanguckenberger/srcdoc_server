@@ -14,6 +14,7 @@ const {
   sendResetPasswordEmail,
 } = require("../utils/sendEmail");
 const User = require("../models/User");
+const Settings = require("../models/UserSettings");
 
 dotenv.config();
 
@@ -171,7 +172,7 @@ router.put("/reset-password/:token", async (req, res, next) => {
 });
 
 // Local Login Route
-router.post("/login", passport.authenticate("local"), (req, res) => {
+router.post("/login", passport.authenticate("local"), async (req, res) => {
   const token = makeToken(req.user);
 
   res.cookie("server_token", token, {
@@ -192,7 +193,10 @@ router.post("/login", passport.authenticate("local"), (req, res) => {
     console.log("error::", error);
   }
 
-  res.send({ token });
+  // get user settings
+  const settings = await Settings.findByUserId(req.user.id);
+
+  res.send({ token, user: req.user, settings });
   // res.json({ token });
 });
 
