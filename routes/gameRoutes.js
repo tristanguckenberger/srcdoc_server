@@ -83,10 +83,12 @@ router.get("/all", async (req, res, next) => {
     // Order by ID to ensure consistent results
     // Limit the number of results to the specified limit
     const queryText = `
-      SELECT * FROM games
-      WHERE id > $1 AND games.published = true
-      ORDER BY id ASC
-      LIMIT $2
+      SELECT games.*, favorites.user_id, favorites.timestamp 
+        FROM games
+        JOIN favorites ON games.id = favorites.game_id
+        WHERE games.id > $1 AND games.published = true
+        ORDER BY games.id ASC
+        LIMIT $2
     `;
 
     const result = await query(queryText, [cursor, limit]);
