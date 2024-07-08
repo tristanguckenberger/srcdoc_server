@@ -101,6 +101,32 @@ router.post("/verify", async (req, res, next) => {
   }
 });
 
+router.get("/resend-verification-email/:userId", async (req, res, next) => {
+  const { userId } = req.params;
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.is_active) {
+      return res.status(400).json({ message: "User is already verified" });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    await query("UPDATE users SET verification_token = $1 WHERE id = $2", [
+      verificationToken,
+      userId,
+    ]);
+
+    sendVerificationEmail(user.email, verificationToken);
+    res.status(200).json({ message: "Verification email resent!" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Password Reset endpoint
 router.put("/forgot-password", async (req, res, next) => {
   const { email } = req.body;
