@@ -21,6 +21,19 @@ class User {
     }
   }
 
+  static async findByUsername(username) {
+    try {
+      const user = await query(
+        "SELECT users.id FROM users WHERE username = $1",
+        [username]
+      );
+      return user.rows[0];
+    } catch (error) {
+      console.error("Error fetching user by username:", error);
+      return null;
+    }
+  }
+
   static async findById(id) {
     try {
       const user = await query("SELECT * FROM users WHERE id = $1", [id]);

@@ -41,6 +41,23 @@ router.post(
     }
 
     const { username, email, password } = req.body;
+
+    const userEmailExists = await User.findByEmail(email);
+    if (userEmailExists) {
+      return res.status(400).json({
+        message:
+          "A user with that email already exists. Please try signing in or using a different email.",
+      });
+    }
+
+    const userUsernameExists = await User.findByUsername(username);
+
+    if (userUsernameExists) {
+      return res
+        .status(400)
+        .json({ message: "Username taken! Please try a different username." });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -92,9 +109,7 @@ router.post("/verify", async (req, res, next) => {
 
       res.status(200).json({ message: "Email verified successfully!" });
     } else {
-      res
-        .status(400)
-        .json({ message: "Invalid or expired verification token" });
+      res.status(400).json({ message: "Invalid verification token." });
     }
   } catch (error) {
     next(error);
@@ -204,32 +219,64 @@ router.put("/reset-password/:token", async (req, res, next) => {
 });
 
 // Local Login Route
-router.post("/login", passport.authenticate("local"), async (req, res) => {
-  const token = makeToken(req.user);
-
-  res.cookie("server_token", token, {
-    maxAge: 900000,
-    httpOnly: false,
-    path: "/server",
-  });
-
-  try {
-    const userSockets = getUserSockets();
-    const client = userSockets.get(req.user.id);
-    if (client) {
-      client.send(JSON.stringify({ type: "login", userId: req.user.id }));
-    } else {
-      userSockets.set(req.user.id, req.client);
+router.post("/login", (req, res, next) => {
+  passport.authenticate("local", async (err, user, info) => {
+    console.log("passport.authenticate::callBack::err::", err);
+    console.log("passport.authenticate::callBack::user::", user);
+    console.log("passport.authenticate::callBack::info::", info);
+    if (err) {
+      return next(err); // will generate a 500 error
     }
-  } catch (error) {
-    console.log("error::", error);
-  }
+    // Generate a JSON response reflecting authentication status
+    if (!user) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Unable to sign in. Please check your email/password and try again.",
+        });
+    }
 
-  // get user settings
-  const settings = await Settings.findByUserId(req.user.id);
+    req.login(user, async (err) => {
+      if (err) {
+        next(err);
+      }
 
-  res.send({ token, user: req.user, settings });
-  // res.json({ token });
+      if (!user) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Unable to sign in. Please check your email/password and try again.",
+          });
+      }
+
+      const token = makeToken(req.user);
+
+      res.cookie("server_token", token, {
+        maxAge: 900000,
+        httpOnly: false,
+        path: "/server",
+      });
+
+      try {
+        const userSockets = getUserSockets();
+        const client = userSockets.get(req.user.id);
+        if (client) {
+          client.send(JSON.stringify({ type: "login", userId: req.user.id }));
+        } else {
+          userSockets.set(req.user.id, req.client);
+        }
+      } catch (error) {
+        console.log("error::", error);
+      }
+
+      // get user settings
+      const settings = await Settings.findByUserId(req.user.id);
+
+      res.send({ token, user: req.user, settings });
+    });
+  })(req, res, next);
 });
 
 // User logout
