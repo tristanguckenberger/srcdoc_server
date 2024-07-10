@@ -83,7 +83,7 @@ router.get("/all", async (req, res, next) => {
     // Order by ID to ensure consistent results
     // Limit the number of results to the specified limit
     const queryText = `
-      SELECT games.*, favorites.user_id, favorites.timestamp 
+      SELECT games.*, favorites.user_id, favorites.timestamp
         FROM games
         JOIN favorites ON games.id = favorites.game_id
         WHERE games.id > $1 AND games.published = true
@@ -104,6 +104,262 @@ router.get("/all", async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+});
+
+// Get all games with offset-based pagination
+router.get("/paginated", async (req, res, next) => {
+  const limit = parseInt(req.query.limit, 10) || 50; // Default limit to 50 games
+  const offset = parseInt(req.query.offset, 10) || 0;
+
+  const fetchGames = async (limit, offset) => {
+    return await query(
+      `SELECT 
+        * FROM games 
+        WHERE published = true 
+        ORDER BY id DESC 
+        LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+  };
+
+  const fetchAssociatedData = async (games) => {
+    const userIds = games.map((g) => g.user_id);
+    const gameIds = games.map((g) => g.id);
+
+    const users = await query(
+      `SELECT users.id, users.username, users.profile_photo FROM users WHERE id = ANY($1::int[])`,
+      [userIds]
+    );
+
+    const tags = await query(
+      `SELECT * FROM tags WHERE id = ANY(SELECT tag_id FROM game_tags WHERE game_id = ANY($1::int[]))`,
+      [gameIds]
+    );
+
+    const files = await query(
+      `SELECT * FROM files WHERE game_id = ANY($1::int[])`,
+      [gameIds]
+    );
+
+    const favorites = await query(
+      `SELECT * FROM favorites WHERE game_id = ANY($1::int[])`,
+      [gameIds]
+    );
+
+    return {
+      users: users.rows,
+      tags: tags.rows,
+      files: files.rows,
+      favorites: favorites.rows,
+    };
+  };
+
+  try {
+    const totalGamesResult = await query(
+      `SELECT COUNT(*) AS total FROM games WHERE published = true`
+    );
+
+    const totalGames = totalGamesResult.rows[0].total;
+    const gamesResult = await fetchGames(limit, offset);
+    const games = gamesResult.rows;
+    const associatedData = await fetchAssociatedData(games);
+
+    // Combine data
+    const combinedGames = games.map((game) => {
+      const associatedUser = associatedData.users.find(
+        (u) => u.id === game.user_id
+      );
+      const associatedTags = associatedData.tags.filter(
+        (t) => t.id === game.id
+      );
+      const associatedFiles = associatedData.files.filter(
+        (f) => f.game_id === game.id
+      );
+      const associatedFavorites = associatedData.favorites.filter(
+        (f) => f.game_id === game.id
+      );
+
+      return {
+        ...game,
+        user: associatedUser,
+        tags: associatedTags,
+        files: associatedFiles,
+        favorites: associatedFavorites,
+      };
+    });
+
+    res.status(200).json({ games: combinedGames, total: totalGames });
+  } catch (error) {
+    console.error("Error fetching games and associated data", error);
+  }
+});
+
+router.get("/slider", async (req, res, next) => {
+  const limit = parseInt(req.query.limit, 10) || 5; // Default limit to 5 games
+  const currentGame = parseInt(req.query.currentGame, 10);
+
+  if (!currentGame) {
+    return res
+      .status(400)
+      .json({ message: "Please provide a current game ID" });
+  }
+
+  const game = await Game.findById(currentGame);
+  if (!game) {
+    return res.status(404).json({ message: "Game not found" });
+  }
+
+  const fetchGameById = async (id) => {
+    return await query(
+      `SELECT * FROM games WHERE published = true AND id = $1`,
+      [id]
+    );
+  };
+
+  const fetchAllGameIds = async () => {
+    return await query(
+      `SELECT id FROM games WHERE published = true ORDER BY id ASC`
+    );
+  };
+
+  const fetchGamesByIds = async (ids) => {
+    return await query(
+      `SELECT * FROM games WHERE id = ANY($1::int[]) AND published = true ORDER BY id ASC`,
+      [ids]
+    );
+  };
+
+  const fetchGamesAround = async (currentGame, limit) => {
+    const halfLimit = Math.floor(limit / 2);
+
+    // Fetch all game IDs
+    const allGamesResult = await fetchAllGameIds();
+    const allGameIds = allGamesResult.rows.map((row) => row.id);
+
+    // Find the index of the current game
+    const currentIndex = allGameIds.indexOf(currentGame);
+
+    if (currentIndex === -1) {
+      return [];
+    }
+
+    // Calculate the indices for the range
+    const totalGames = allGameIds.length;
+    let startIndices = [];
+    let endIndices = [];
+
+    for (let i = 1; i <= halfLimit; i++) {
+      startIndices.push(
+        allGameIds[(currentIndex - i + totalGames) % totalGames]
+      );
+      endIndices.push(allGameIds[(currentIndex + i) % totalGames]);
+    }
+
+    const gameIds = [...startIndices.reverse(), currentGame, ...endIndices];
+
+    // Fetch the games by IDs
+    const gamesResult = await fetchGamesByIds(gameIds);
+    return gamesResult.rows;
+  };
+
+  const fetchAssociatedData = async (games) => {
+    const userIds = games.map((g) => g.user_id);
+    const gameIds = games.map((g) => g.id);
+
+    const users = await query(
+      `SELECT users.id, users.username, users.profile_photo FROM users WHERE id = ANY($1::int[])`,
+      [userIds]
+    );
+
+    const tags = await query(
+      `SELECT * FROM tags WHERE id = ANY(SELECT tag_id FROM game_tags WHERE game_id = ANY($1::int[]))`,
+      [gameIds]
+    );
+
+    const files = await query(
+      `SELECT * FROM files WHERE game_id = ANY($1::int[])`,
+      [gameIds]
+    );
+
+    const favorites = await query(
+      `SELECT * FROM favorites WHERE game_id = ANY($1::int[])`,
+      [gameIds]
+    );
+
+    return {
+      users: users.rows,
+      tags: tags.rows,
+      files: files.rows,
+      favorites: favorites.rows,
+    };
+  };
+
+  try {
+    const totalGamesResult = await query(
+      `SELECT COUNT(*) AS total FROM games WHERE published = true`
+    );
+
+    const totalGames = totalGamesResult.rows[0].total;
+    const games = await fetchGamesAround(currentGame, limit);
+    const associatedData = await fetchAssociatedData(games);
+
+    // Combine data
+    const combinedGames = games.map((game) => {
+      const associatedUser = associatedData.users.find(
+        (u) => u.id === game.user_id
+      );
+      const associatedTags = associatedData.tags.filter(
+        (t) => t.id === game.id
+      );
+      const associatedFiles = associatedData.files.filter(
+        (f) => f.game_id === game.id
+      );
+      const associatedFavorites = associatedData.favorites.filter(
+        (f) => f.game_id === game.id
+      );
+
+      return {
+        ...game,
+        user: associatedUser,
+        tags: associatedTags,
+        files: associatedFiles,
+        favorites: associatedFavorites,
+      };
+    });
+
+    function centerTarget(arr, target) {
+      const targetIndex = arr.findIndex((item) => item.id === target);
+
+      if (targetIndex === -1) {
+        throw new Error("Target not found in the array");
+      }
+
+      const result = [];
+      const len = arr.length;
+
+      // Add elements before the target
+      for (let i = 0; i < 2; i++) {
+        result.push(arr[(targetIndex - 2 + i + len) % len]);
+      }
+
+      // Add the target element
+      result.push(arr[targetIndex]);
+
+      // Add elements after the target
+      for (let i = 1; i <= 2; i++) {
+        result.push(arr[(targetIndex + i) % len]);
+      }
+
+      return result;
+    }
+
+    const centeredGames = centerTarget(combinedGames, currentGame);
+
+    res.status(200).json({ games: centeredGames, total: totalGames });
+  } catch (error) {
+    console.error("Error fetching games and associated data", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

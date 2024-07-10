@@ -104,7 +104,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Get all comments for a game
-router.get("/game/:gameId", async (req, res) => {
+router.get("/game/:gameId", async (req, res, next) => {
   try {
     const { gameId } = req.params;
     const result = await query(
@@ -112,6 +112,75 @@ router.get("/game/:gameId", async (req, res) => {
       [gameId]
     );
     res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// NOT IN USE, WORK IN PROGRESS
+router.get("/paginated/:gameId/comments", async (req, res, next) => {
+  const { gameId } = req.params;
+  const limit = parseInt(req.query.limit, 10) || 50; // Default limit to 50 comments
+  const offset = parseInt(req.query.offset, 10) || 0;
+
+  const fetchComments = async (gameId, limit, offset) => {
+    return await query(
+      `SELECT
+        comments.*,
+        users.profile_photo,
+        users.username
+      FROM comments
+      JOIN users ON comments.user_id = users.id
+      WHERE game_id = $1
+      ORDER BY comments.created_at DESC
+      LIMIT $2 OFFSET $3`,
+      [gameId, limit, offset]
+    );
+  };
+
+  const fetchAssociatedData = async (comments) => {
+    const userIds = comments.map((c) => c.user_id);
+
+    const users = await query(
+      `SELECT id, profile_photo, username FROM users WHERE id = ANY($1::int[])`,
+      [userIds]
+    );
+
+    return {
+      users: users.rows,
+    };
+  };
+
+  try {
+    // Fetch total comments count
+    const totalCommentsResult = await query(
+      `SELECT COUNT(*) AS total FROM comments WHERE game_id = $1`,
+      [gameId]
+    );
+    const totalComments = totalCommentsResult.rows[0].total;
+
+    // Fetch paginated comments
+    const commentsResult = await fetchComments(gameId, limit, offset);
+    const comments = commentsResult.rows;
+
+    // Fetch associated data
+    const associatedData = await fetchAssociatedData(comments);
+
+    // Combine data
+    const combinedComments = comments.map((comment) => {
+      const user = associatedData.users.find((u) => u.id === comment.user_id);
+
+      return {
+        ...comment,
+        profile_photo: user?.profile_photo || null,
+        username: user?.username || null,
+      };
+    });
+
+    res.status(200).json({
+      comments: combinedComments,
+      total: totalComments,
+    });
   } catch (error) {
     next(error);
   }
