@@ -32,6 +32,18 @@ router.get("/all", async (req, res, next) => {
   }
 });
 
+// Get each user Id & Updated At
+router.get("/allIds", async (req, res, next) => {
+  try {
+    const result = await query(
+      "SELECT users.id, users.updated_date FROM users WHERE is_active = true"
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get Single User by User ID
 router.get("/:id", async (req, res, next) => {
   try {

@@ -184,6 +184,18 @@ router.get("/:playlistId", async (req, res, next) => {
   }
 });
 
+// Get each playlist Id & Updated At
+router.get("/all/sitemap", async (req, res, next) => {
+  try {
+    const result = await query(
+      "SELECT playlist.id, playlist.updated_at FROM playlist WHERE is_public = true"
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all playlists for a user
 router.get("/user/:userId", async (req, res, next) => {
   const userId = req.params.userId;
