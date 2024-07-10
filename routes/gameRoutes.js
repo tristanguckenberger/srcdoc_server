@@ -60,15 +60,17 @@ router.post("/create", authenticate, placeholder, async (req, res, next) => {
   }
 });
 
-// Get All Games
-// router.get("/all", async (req, res, next) => {
-//   try {
-//     const result = await query("SELECT * FROM games");
-//     res.status(200).json(result.rows);
-//   } catch (error) {
-//     next(error);
-//   }
-// });
+// Get each Game Id & Updated At
+router.get("/allIds", async (req, res, next) => {
+  try {
+    const result = await query(
+      "SELECT games.id, games.updated_at FROM games WHERE published = true"
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Get All Games with Cursor-based Pagination
 router.get("/all", async (req, res, next) => {
