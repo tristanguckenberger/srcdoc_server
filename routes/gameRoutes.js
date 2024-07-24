@@ -6,6 +6,7 @@ const Leaderboards = require("../models/Leaderboards");
 const Tag = require("../models/Tag");
 const File = require("../models/File");
 const { authenticate } = require("../middleware/auth");
+const { bypassableAuthenticate } = require("../middleware/bypassableAuth");
 const { logActivity } = require("../middleware/activity");
 const { publishGameCheck } = require("../middleware/publish");
 const { placeholder } = require("../middleware/placeholder");
@@ -110,21 +111,25 @@ router.get("/all", async (req, res, next) => {
 });
 
 // Get all games with offset-based pagination
-router.get("/paginated", async (req, res, next) => {
+router.get("/paginated", bypassableAuthenticate, async (req, res, next) => {
+  if (res.headersSent) {
+    return;
+  }
   const limit = parseInt(req.query.limit, 10) || 50; // Default limit to 50 games
   const offset = parseInt(req.query.offset, 10) || 0;
+  const currentUser = req?.user?.id;
 
   const fetchGames = async (limit, offset) => {
     return await query(
       `SELECT 
         * FROM games 
         WHERE published = true 
+        OR user_id = $1
         ORDER BY id DESC 
-        LIMIT $1 OFFSET $2`,
-      [limit, offset]
+        LIMIT $2 OFFSET $3`,
+      [currentUser, limit, offset]
     );
   };
-
   const fetchAssociatedData = async (games) => {
     const userIds = games.map((g) => g.user_id);
     const gameIds = games.map((g) => g.id);
@@ -158,14 +163,41 @@ router.get("/paginated", async (req, res, next) => {
   };
 
   try {
+    if (res.headersSent) {
+      return;
+    }
+
     const totalGamesResult = await query(
-      `SELECT COUNT(*) AS total FROM games WHERE published = true`
+      `SELECT COUNT(*) AS total FROM games WHERE published = true OR user_id = $1`,
+      [currentUser]
     );
 
+    if (res.headersSent) {
+      return;
+    }
+
     const totalGames = totalGamesResult.rows[0].total;
+    if (res.headersSent) {
+      return;
+    }
     const gamesResult = await fetchGames(limit, offset);
+    if (res.headersSent) {
+      return;
+    }
+
     const games = gamesResult.rows;
+    if (res.headersSent) {
+      return;
+    }
+
     const associatedData = await fetchAssociatedData(games);
+    if (res.headersSent) {
+      return;
+    }
+
+    if (res.headersSent) {
+      return;
+    }
 
     // Combine data
     const combinedGames = games.map((game) => {
@@ -191,15 +223,21 @@ router.get("/paginated", async (req, res, next) => {
       };
     });
 
+    // Check if response is already sent
+    if (res.headersSent) {
+      return;
+    }
+
     res.status(200).json({ games: combinedGames, total: totalGames });
   } catch (error) {
     console.error("Error fetching games and associated data", error);
   }
 });
 
-router.get("/slider", async (req, res, next) => {
+router.get("/slider", bypassableAuthenticate, async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 5; // Default limit to 5 games
   const currentGame = parseInt(req.query.currentGame, 10);
+  const currentUser = req?.user?.id;
 
   if (!currentGame) {
     return res
@@ -221,14 +259,15 @@ router.get("/slider", async (req, res, next) => {
 
   const fetchAllGameIds = async () => {
     return await query(
-      `SELECT id FROM games WHERE published = true ORDER BY id ASC`
+      `SELECT id FROM games WHERE published = true OR user_id = $1 ORDER BY id ASC`,
+      [currentUser]
     );
   };
 
   const fetchGamesByIds = async (ids) => {
     return await query(
-      `SELECT * FROM games WHERE id = ANY($1::int[]) AND published = true ORDER BY id ASC`,
-      [ids]
+      `SELECT * FROM games WHERE id = ANY($1::int[]) AND published = true OR user_id = $2 ORDER BY id ASC`,
+      [ids, currentUser]
     );
   };
 
@@ -299,7 +338,8 @@ router.get("/slider", async (req, res, next) => {
 
   try {
     const totalGamesResult = await query(
-      `SELECT COUNT(*) AS total FROM games WHERE published = true`
+      `SELECT COUNT(*) AS total FROM games WHERE published = true OR user_id = $1`,
+      [currentUser]
     );
 
     const totalGames = totalGamesResult.rows[0].total;
@@ -697,7 +737,6 @@ router.put("/:gameId/files/:fileId", authenticate, async (req, res, next) => {
   const file = await File.findById(fileId);
 
   if (!file) {
-    console.log("file::NOT_FOUND");
     return res.status(404).json({ message: "File not found" });
   }
 
