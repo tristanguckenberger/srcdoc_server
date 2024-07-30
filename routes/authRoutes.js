@@ -149,9 +149,7 @@ router.put("/forgot-password", async (req, res, next) => {
 
   if (user) {
     const token = crypto.randomBytes(20).toString("hex");
-    // 3600000
-    // const expiration = new Date(Date.now() + 30000).toISOString(); // 1 hour from now
-    const expiration = moment().tz("America/New_York").add(1, "hour").format();
+    const expiration = moment().utc().add(1, "hour").toISOString();
 
     try {
       await query(
