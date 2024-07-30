@@ -154,13 +154,15 @@ router.put("/forgot-password", async (req, res, next) => {
     const expiration = moment().tz("America/New_York").add(1, "hour").format();
 
     try {
-      const userDidUpdate = await query(
+      await query(
         "UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3",
         [token, expiration, user.id]
       );
 
       sendResetPasswordEmail(email, token);
-      res.status(200).json({ message: "Check your email!" });
+      res
+        .status(200)
+        .json({ message: "Check your email!", expiration, user: user.id });
     } catch (error) {
       next(error);
     }
@@ -229,12 +231,10 @@ router.post("/login", (req, res, next) => {
     }
     // Generate a JSON response reflecting authentication status
     if (!user) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Unable to sign in. Please check your email/password and try again.",
-        });
+      return res.status(400).json({
+        message:
+          "Unable to sign in. Please check your email/password and try again.",
+      });
     }
 
     req.login(user, async (err) => {
@@ -243,12 +243,10 @@ router.post("/login", (req, res, next) => {
       }
 
       if (!user) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Unable to sign in. Please check your email/password and try again.",
-          });
+        return res.status(400).json({
+          message:
+            "Unable to sign in. Please check your email/password and try again.",
+        });
       }
 
       const token = makeToken(req.user);
