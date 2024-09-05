@@ -221,53 +221,22 @@ router.put("/reset-password/:token", async (req, res, next) => {
 // Local Login Route
 router.post("/login", (req, res, next) => {
   passport.authenticate("local", async (err, user, info) => {
-    console.log("passport.authenticate::callBack::err::", err);
-    console.log("passport.authenticate::callBack::user::", user);
-    console.log("passport.authenticate::callBack::info::", info);
-    if (err) {
-      return next(err); // will generate a 500 error
-    }
-    // Generate a JSON response reflecting authentication status
+    if (err) return next(err);
     if (!user) {
-      return res.status(400).json({
-        message:
-          "Unable to sign in. Please check your email/password and try again.",
-      });
+      return res.status(400).json({ message: "Invalid login details" });
     }
 
     req.login(user, async (err) => {
-      if (err) {
-        next(err);
-      }
-
-      if (!user) {
-        return res.status(400).json({
-          message:
-            "Unable to sign in. Please check your email/password and try again.",
-        });
-      }
+      if (err) return next(err);
 
       const token = makeToken(req.user);
-
       res.cookie("server_token", token, {
         maxAge: 900000,
         httpOnly: false,
         path: "/server",
       });
 
-      try {
-        const userSockets = getUserSockets();
-        const client = userSockets?.get(req.user.id);
-        if (client) {
-          client?.send(JSON.stringify({ type: "login", userId: req.user.id }));
-        } else {
-          userSockets?.set(req.user.id, req.client);
-        }
-      } catch (error) {
-        console.log("error::", error);
-      }
-
-      // get user settings
+      // Get user settings
       const settings = await Settings.findByUserId(req.user.id);
 
       res.send({ token, user: req.user, settings });
