@@ -10,7 +10,8 @@ class UserSettings {
     hidePopUpInfoHome,
     hidePopUpInfoGames,
     hidePopUpInfoEditor,
-    darkMode
+    darkMode,
+    userAccentColor
   ) {
     this.id = id;
     this.userId = userId;
@@ -21,6 +22,7 @@ class UserSettings {
     this.hidePopUpInfoGames = hidePopUpInfoGames;
     this.hidePopUpInfoEditor = hidePopUpInfoEditor;
     this.darkMode = darkMode;
+    this.userAccentColor = userAccentColor;
   }
 
   static async findById(id) {

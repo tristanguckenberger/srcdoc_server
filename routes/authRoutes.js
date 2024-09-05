@@ -257,11 +257,11 @@ router.post("/login", (req, res, next) => {
 
       try {
         const userSockets = getUserSockets();
-        const client = userSockets.get(req.user.id);
+        const client = userSockets?.get(req.user.id);
         if (client) {
-          client.send(JSON.stringify({ type: "login", userId: req.user.id }));
+          client?.send(JSON.stringify({ type: "login", userId: req.user.id }));
         } else {
-          userSockets.set(req.user.id, req.client);
+          userSockets?.set(req.user.id, req.client);
         }
       } catch (error) {
         console.log("error::", error);
