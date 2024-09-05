@@ -32,23 +32,35 @@ router.put("/update", authenticate, async (req, res, next) => {
     hide_pop_up_info_games,
     hide_pop_up_info_editor,
     dark_mode,
+    user_accent_color,
   } = req.body;
 
   const settings = await UserSettings.findByUserId(authenticatedUserId);
 
-  if (!settings) {
+  if (!settings && !authenticatedUserId) {
     return res.status(404).json({ message: "User settings not found" });
   }
 
+  if (!settings && authenticatedUserId) {
+    try {
+      const result = await query(
+        "INSERT INTO user_settings (user_id, user_accent_color) VALUES ($1, $2) returning *",
+	[authenticatedUserId, user_accent_color]
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
   try {
     const result = await query(
-      "UPDATE user_settings SET hide_pop_up_info = $1, hide_pop_up_info_home = $2, hide_pop_up_info_games = $3, hide_pop_up_info_editor = $4, dark_mode = $5 WHERE id = $6 RETURNING *",
+      "UPDATE user_settings SET hide_pop_up_info = $1, hide_pop_up_info_home = $2, hide_pop_up_info_games = $3, hide_pop_up_info_editor = $4, dark_mode = $5, user_accent_color = $6 WHERE id = $7 RETURNING *",
       [
         hide_pop_up_info,
         hide_pop_up_info_home,
         hide_pop_up_info_games,
         hide_pop_up_info_editor,
         dark_mode,
+	user_accent_color,
         settings?.id,
       ]
     );

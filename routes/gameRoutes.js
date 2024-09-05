@@ -440,13 +440,13 @@ router.get("/user/:userId", async (req, res, next) => {
 router.put(
   "/update/:id",
   authenticate,
-  upload.single("thumbnail"),
+  //upload.single("thumbnail"),
   // call publishGameCheck
-  publishGameCheck,
+  //publishGameCheck,
   async (req, res, next) => {
     const { id } = req.params;
     const game = await Game.findById(id);
-    const canPublish = req?.canPublish;
+    //const canPublish = req?.canPublish;
 
     if (!game) {
       return res.status(404).json({ message: `Game with ID: ${id} not found` });
@@ -459,9 +459,9 @@ router.put(
       thumbnail = game.thumbnail,
     } = req.body;
 
-    if (!canPublish) {
-      published = false;
-    }
+    //if (!canPublish) {
+    //  published = false;
+    //}
 
     const userId = req?.user?.id;
 

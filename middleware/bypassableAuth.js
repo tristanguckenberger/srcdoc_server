@@ -34,23 +34,23 @@ exports.bypassableAuthenticate = async (req, res, next) => {
       const user = await User.findById(decoded?.id);
       const path = req?.originalUrl;
 
-      if (
-        (!user?.is_active &&
-          !path.includes("/api/auth/logout") &&
-          !path.includes("/api/users/update/") &&
-          !path.includes("/api/users/me")) ||
-        (!user?.is_active &&
-          !path.includes("/api/auth/logout") &&
-          !req?.body?.isActive &&
-          path.includes("/api/users/update/") &&
-          !path.includes("/api/users/me"))
-      ) {
-        return res.status(401).json({
-          message: `User account, "${
-            user?.username ?? "username"
-          }", is not active!`,
-        });
-      }
+     // if (
+     //   (!user?.is_active &&
+     //     !path.includes("/api/auth/logout") &&
+     //     !path.includes("/api/users/update/") &&
+     //     !path.includes("/api/users/me")) ||
+     //   (!user?.is_active &&
+     //     !path.includes("/api/auth/logout") &&
+     //     !req?.body?.isActive &&
+     //     path.includes("/api/users/update/") &&
+     //     !path.includes("/api/users/me"))
+     // ) {
+     //   return res.status(401).json({
+     //     message: `User account, "${
+     //       user?.username ?? "username"
+     //     }", is not active!`,
+     //   });
+     // }
 
       req.user = user;
       return next();
@@ -59,6 +59,7 @@ exports.bypassableAuthenticate = async (req, res, next) => {
     }
   } catch (error) {
     console.log("ERROR::", error);
+    throw new Error("error::", error);
     return res
       .status(400)
       .json({ message: "Bad token" })
