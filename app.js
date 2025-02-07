@@ -26,8 +26,8 @@ const followsRoutes = require("./routes/followsRoutes");
 const feedRoutes = require("./routes/feedRoutes");
 const usersActivitiesRoutes = require("./routes/usersActivitiesRoutes");
 const notificationsRoutes = require("./routes/notificationsRoutes");
-const fs = require('fs');
-const https = require('https');
+const fs = require("fs");
+const https = require("https");
 const errorHandler = require("./middleware/errorHandler");
 const winston = require("winston");
 const logger = require("./middleware/logger.js");
@@ -35,8 +35,8 @@ const logger = require("./middleware/logger.js");
 const app = express();
 
 //const options = {
-//	key: fs.readFileSync(process.env.SSL_KEY),
-//	cert: fs.readFileSync(process.env.SSL_CRT)
+//  key: fs.readFileSync(process.env.SSL_KEY),
+//  cert: fs.readFileSync(process.env.SSL_CRT)
 //};
 //const server = https.createServer(options, app);
 const server = http.createServer(app);
@@ -111,7 +111,7 @@ if (process.env.NODE_ENV !== "production") {
 
 // Server
 const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0';
+const HOST = "0.0.0.0";
 // app.listen(PORT, () => {
 //   console.log(`Server is running on port ${PORT}`);
 // });

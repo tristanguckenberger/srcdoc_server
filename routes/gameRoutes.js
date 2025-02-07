@@ -1,5 +1,5 @@
 const express = require("express");
-const { query } = require("../config/db");
+const { query, pool } = require("../config/db");
 const Game = require("../models/Game");
 const GameSession = require("../models/GameSession");
 const Leaderboards = require("../models/Leaderboards");
@@ -10,6 +10,7 @@ const { bypassableAuthenticate } = require("../middleware/bypassableAuth");
 const { logActivity } = require("../middleware/activity");
 const { publishGameCheck } = require("../middleware/publish");
 const { placeholder } = require("../middleware/placeholder");
+const { serializeFunc } = require("../routes/guiProjects");
 const router = express.Router();
 const multer = require("multer");
 
@@ -30,6 +31,339 @@ const getGameActivityData = async (req, res) => {
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+/**
+ * Generate HTML content for a game screen.
+ *
+ * @param {string} screenFolderName - The name of the screen folder (e.g., "screen_1").
+ * @returns {string} - The HTML content.
+ */
+function generateScreenHtml(screenFolderName) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${screenFolderName}</title>
+</head>
+<body>
+  <canvas id="${screenFolderName}_canvas"></canvas>
+</body>
+</html>`;
+}
+
+/**
+ * Generate CSS content for a game screen.
+ *
+ * @param {string} screenFolderName - The name of the screen folder.
+ * @returns {string} - The CSS content.
+ */
+function generateScreenCss(screenFolderName) {
+  return `/* Base CSS for ${screenFolderName} */\nbody { margin: 0; padding: 0; }`;
+}
+
+/**
+ * Generate JS content for a game screen.
+ *
+ * This file is the base file that builds on projectObject.svelte.ts and implements the base game loop.
+ *
+ * @param {string} screenFolderName - The name of the screen folder.
+ * @returns {string} - The JS content.
+ */
+function generateScreenJs(screenFolderName) {
+  return `// Base game loop for ${screenFolderName}
+// Not needed - import BaseScreenLVL from './projectObject.svelte';
+
+const canvas = document.getElementById('${screenFolderName}_canvas');
+if (canvas) {
+  const context = canvas.getContext('2d');
+  const screen = new BaseScreenLVL(canvas, context);
+  screen.start();
+}`;
+}
+
+/**
+ * POST /create-gui-project
+ *
+ * Creates a new GUI-based game project with the following file structure:
+ *
+ * root (folder)
+ * ├── presets (folder)
+ * │     ├── dynamicObject.js
+ * │     ├── staticObject.js
+ * │     └── gameObject.js
+ * ├── screen_1 (folder, type "lvl")
+ * │     ├── screen_1_index.html
+ * │     ├── screen_1_index.css
+ * │     └── screen_1_index.js
+ * └── assets (folder, empty)
+ *
+ * A game screen record is also created and linked to the screen folder.
+ */
+router.post("/create-gui-project", authenticate, async (req, res, next) => {
+  const userId = req?.user?.id;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Allow the client to provide a game title and description.
+  const { title = "New GUI Project", description = "" } = req.body;
+
+  let client;
+  try {
+    // Acquire a client from the pool so that all queries run on the same connection.
+    client = await pool.connect();
+    await client.query("BEGIN");
+
+    // 1. Create the new game record.
+    const gameResult = await client.query(
+      `INSERT INTO games (user_id, title, description, published, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING *`,
+      [userId, title, description, false]
+    );
+    const game = gameResult.rows[0];
+    if (!game) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ message: "Failed to create game" });
+    }
+    const gameId = game.id;
+
+    // 2. Create three game screens.
+    // Screen 1: Default game screen (lvl)
+    const screen1Result = await client.query(
+      `INSERT INTO game_screens (title, description, game_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       RETURNING *`,
+      ["screen_1", "Default game screen", gameId]
+    );
+    const screen1 = screen1Result.rows[0];
+    if (!screen1) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ message: "Failed to create screen 1" });
+    }
+
+    // ui Screen: Default UI screen (ui)
+    const uiScreenResult = await client.query(
+      `INSERT INTO game_screens (title, description, game_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       RETURNING *`,
+      ["ui_1", "Default UI screen", gameId]
+    );
+    const uiScreen = uiScreenResult.rows[0];
+    if (!uiScreen) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ message: "Failed to create UI screen" });
+    }
+
+    // 3. Create the file structure.
+    // Create the root folder.
+    const rootFolderResult = await client.query(
+      `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING *`,
+      ["root", "folder", null, gameId, null, null]
+    );
+    const rootFolder = rootFolderResult.rows[0];
+    if (!rootFolder) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ message: "Failed to create root folder" });
+    }
+
+    // Create the presets folder under root.
+    const presetsFolderResult = await client.query(
+      `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING *`,
+      ["presets", "folder", null, gameId, rootFolder.id, null]
+    );
+    const presetsFolder = presetsFolderResult.rows[0];
+    if (!presetsFolder) {
+      await client.query("ROLLBACK");
+      return res
+        .status(500)
+        .json({ message: "Failed to create presets folder" });
+    }
+
+    // Insert the preset files into the presets folder.
+    const presetFiles = [
+      {
+        name: "dynamicObject.js",
+        type: "js",
+        content: serializeFunc({ name: "DynamicObject" }),
+      },
+      {
+        name: "staticObject.js",
+        type: "js",
+        content: serializeFunc({ name: "StaticObject" }),
+      },
+      {
+        name: "gameObject.js",
+        type: "js",
+        content: serializeFunc({ name: "GameObject" }),
+      },
+    ];
+    const presetFilePromises = presetFiles.map((file) =>
+      client.query(
+        `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING *`,
+        [file.name, file.type, file.content, gameId, presetsFolder.id, null]
+      )
+    );
+    const presetFileResults = await Promise.all(presetFilePromises);
+    const insertedPresetFiles = presetFileResults.map(
+      (result) => result.rows[0]
+    );
+
+    // Create a folder for the UI screen (under root).
+    const uiFolderResult = await client.query(
+      `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+   VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+   RETURNING *`,
+      ["ui_1", "folder", null, gameId, rootFolder.id, uiScreen.id]
+    );
+    const uiFolder = uiFolderResult.rows[0];
+    if (!uiFolder) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ message: "Failed to create ui folder" });
+    }
+
+    // Insert files for the UI screen.
+    const uiFilesData = [
+      {
+        name: "ui_1_index.html",
+        type: "html",
+        content: generateScreenHtml("ui_1"),
+      },
+      {
+        name: "ui_1_index.css",
+        type: "css",
+        content: generateScreenCss("ui_1"),
+      },
+      {
+        name: "ui_1_index.js",
+        type: "js",
+        content: generateScreenJs("ui_1"),
+      },
+    ];
+
+    const uiFilePromises = uiFilesData.map((file) =>
+      client.query(
+        `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+     RETURNING *`,
+        [file.name, file.type, file.content, gameId, uiFolder.id, uiScreen.id]
+      )
+    );
+
+    const uiFileResults = await Promise.all(uiFilePromises);
+    const insertedUiFiles = uiFileResults.map((result) => result.rows[0]);
+
+    // Create a screen folder for screen_1 (under root).
+    const screen1FolderResult = await client.query(
+      `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING *`,
+      ["screen_1", "folder", null, gameId, rootFolder.id, screen1.id]
+    );
+    const screen1Folder = screen1FolderResult.rows[0];
+    if (!screen1Folder) {
+      await client.query("ROLLBACK");
+      return res
+        .status(500)
+        .json({ message: "Failed to create screen 1 folder" });
+    }
+
+    // Insert files for screen_1.
+    const screen1FilesData = [
+      {
+        name: "screen_1_index.html",
+        type: "html",
+        content: generateScreenHtml("screen_1"),
+      },
+      {
+        name: "screen_1_index.css",
+        type: "css",
+        content: generateScreenCss("screen_1"),
+      },
+      {
+        name: "screen_1_index.js",
+        type: "js",
+        content: generateScreenJs("screen_1"),
+      },
+    ];
+    const screen1FilePromises = screen1FilesData.map((file) =>
+      client.query(
+        `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING *`,
+        [
+          file.name,
+          file.type,
+          file.content,
+          gameId,
+          screen1Folder.id,
+          screen1.id,
+        ]
+      )
+    );
+    const screen1FileResults = await Promise.all(screen1FilePromises);
+    const insertedScreen1Files = screen1FileResults.map(
+      (result) => result.rows[0]
+    );
+
+    // Create the assets folder under root.
+    const assetsFolderResult = await client.query(
+      `INSERT INTO files (name, type, content, game_id, parent_file_id, screen_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+         RETURNING *`,
+      ["assets", "folder", null, gameId, rootFolder.id, null]
+    );
+    const assetsFolder = assetsFolderResult.rows[0];
+    if (!assetsFolder) {
+      await client.query("ROLLBACK");
+      return res
+        .status(500)
+        .json({ message: "Failed to create assets folder" });
+    }
+
+    // Commit the transaction.
+    await client.query("COMMIT");
+
+    // 4. Construct the final response.
+    // Flatten all file records into one array.
+    const files = [
+      rootFolder,
+      presetsFolder,
+      ...insertedPresetFiles,
+      screen1Folder,
+      ...insertedScreen1Files,
+      uiFolder,
+      ...insertedUiFiles,
+      assetsFolder,
+    ];
+
+    // Build the screens array and add extra fields.
+    const screens = [
+      { ...screen1, data: null, type: "lvl" },
+      { ...uiScreen, data: null, type: "ui" },
+    ];
+
+    // Return the newly created project in the desired structure.
+    res.status(201).json({
+      game,
+      currentScreen: screen1.id,
+      screens,
+      files,
+    });
+  } catch (error) {
+    if (client) await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Game (non-gui) -------------------------------------------------------
 // Create
 router.post("/create", authenticate, placeholder, async (req, res, next) => {
   const userId = req?.user?.id;
